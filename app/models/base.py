@@ -22,6 +22,6 @@ class UserPrompt(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("user_account.id", ondelete="CASCADE")
+        ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
-    prompt: Mapped[str] = mapped_column(Text)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)

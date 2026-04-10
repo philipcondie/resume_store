@@ -33,3 +33,7 @@ class LLMInput(BaseModel):
 class LLMOutput(BaseModel):
     summary: str
     jobs: list[JobEntry]
+
+
+class UserPromptUpdate(BaseModel):
+    prompt: str

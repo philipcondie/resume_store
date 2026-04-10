@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from anthropic import APIError
@@ -6,8 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.claude import client
-from app.models.models import UserPrompt
+from app.models.base import UserPrompt
 from app.schemas.base import LLMInput, LLMOutput
+from app.services.prompts import DEFAULT_USER_PROMPT
+
+logger = logging.getLogger(__name__)
 
 prompt_template_dir = Path(__file__).parent.parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(prompt_template_dir))
@@ -26,8 +30,12 @@ async def send_message(
     result = await session.scalars(query)
     user_prompt = result.one_or_none()
     if not user_prompt:
-        raise LookupError(f"No prompt for user {user_id}")
-    system_prompt = base_prompt + "\n\n" + user_prompt.prompt
+        logger.warning(
+            "No user prompt record for user_id=%s; falling back to default prompt",
+            user_id,
+        )
+    prompt_text = user_prompt.prompt if user_prompt else DEFAULT_USER_PROMPT
+    system_prompt = base_prompt + "\n\n" + prompt_text
 
     user_message = user_message_template.render(input.model_dump())
 

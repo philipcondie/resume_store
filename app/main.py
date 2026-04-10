@@ -11,9 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.models.models import User
-from app.schemas.base import LLMInput, Token, UserCreate
+from app.models.base import User, UserPrompt
+from app.schemas.base import LLMInput, LLMOutput, Token, UserCreate, UserPromptUpdate
+from app.services.prompts import DEFAULT_USER_PROMPT
 from app.services.resume import send_message
+from app.services.user_data import upsert_user_prompt
 
 settings = get_settings()
 app = FastAPI()
@@ -92,6 +94,8 @@ async def create_user(session: SessionDep, user: UserCreate):
 
     user_new = User(email=user.email, hashed_password=hashed_password)
     session.add(user_new)
+    await session.flush()
+    session.add(UserPrompt(user_id=user_new.id, prompt=DEFAULT_USER_PROMPT))
     await session.commit()
     await session.refresh(user_new)
     return {"email": user.email}
@@ -121,7 +125,7 @@ async def generate_resume(
     session: SessionDep,
     current_user: Annotated[User, Depends(get_current_user)],
     input: LLMInput,
-):
+) -> LLMOutput:
     try:
         result = await send_message(session, current_user.id, input)
     except ValueError as e:
@@ -131,4 +135,19 @@ async def generate_resume(
     except RuntimeError:
         raise HTTPException(status_code=502, detail="AI service unavailable")
 
+    return result
+
+
+@app.post("/prompt/update")
+async def update_prompt(
+    session: SessionDep,
+    current_user: Annotated[User, Depends(get_current_user)],
+    prompt_update: UserPromptUpdate,
+) -> UserPromptUpdate:
+    try:
+        result = await upsert_user_prompt(session, current_user.id, prompt_update)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return result
