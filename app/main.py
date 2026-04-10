@@ -15,7 +15,7 @@ from app.models.base import User, UserPrompt
 from app.schemas.base import LLMInput, LLMOutput, Token, UserCreate, UserPromptUpdate
 from app.services.prompts import DEFAULT_USER_PROMPT
 from app.services.resume import send_message
-from app.services.user_data import upsert_user_prompt
+from app.services.user_data import get_user_prompt, upsert_user_prompt
 
 settings = get_settings()
 app = FastAPI()
@@ -148,6 +148,18 @@ async def update_prompt(
         result = await upsert_user_prompt(session, current_user.id, prompt_update)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return result
+
+
+@app.get("/prompt")
+async def get_prompt(
+    session: SessionDep,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> UserPromptUpdate:
+    try:
+        result = await get_user_prompt(session, current_user.id)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result

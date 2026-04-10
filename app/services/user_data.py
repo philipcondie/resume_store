@@ -7,6 +7,14 @@ from app.schemas.base import UserPromptUpdate
 from app.services.prompts import DEFAULT_USER_PROMPT
 
 
+async def get_user_prompt(session: AsyncSession, user_id: int) -> UserPromptUpdate:
+    query = select(UserPrompt).where(UserPrompt.user_id == user_id)
+    user_prompt = (await session.scalars(query)).one_or_none()
+    if not user_prompt:
+        raise LookupError(f"No prompt found for user {user_id}")
+    return UserPromptUpdate(prompt=user_prompt.prompt)
+
+
 async def upsert_user_prompt(
     session: AsyncSession, user_id: int, prompt_update: UserPromptUpdate
 ) -> UserPromptUpdate:
