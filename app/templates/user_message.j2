@@ -1,0 +1,24 @@
+<user_instructions>
+    {{ user_instructions }}
+</user_instructions>
+
+<job_description>
+    {{ job_description }}
+</job_description>
+
+<job_history>
+{%- for job in job_history %}
+    <job>
+        <job_id>{{ job.id }}</job_id>
+        <company>{{ job.company }}</company>
+        <job_title>{{ job.job_title }}</job_title>
+        <start_date>{{ job.start_date }}</start_date>
+        <end_date>{{ job.end_date }}</end_date>
+        {%- for bullet in job.bullets%}
+        <bullet>
+            <text>{{ bullet }}</text>
+        </bullet>
+        {%- endfor %}
+    </job>
+{%- endfor %}
+</job_history>

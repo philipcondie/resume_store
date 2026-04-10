@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.models.models import User
-from app.schemas.base import Token, UserCreate
+from app.schemas.base import LLMInput, Token, UserCreate
+from app.services.resume import send_message
 
 settings = get_settings()
 app = FastAPI()
@@ -115,8 +116,19 @@ async def login(
     return Token(access_token=access_token, token_type="bearer")
 
 
-@app.get("/test_credentials")
-async def test_credentials(
-    session: SessionDep, current_user: Annotated[User, Depends(get_current_user)]
+@app.post("/generate")
+async def generate_resume(
+    session: SessionDep,
+    current_user: Annotated[User, Depends(get_current_user)],
+    input: LLMInput,
 ):
-    return f"Hello {current_user.email}"
+    try:
+        result = await send_message(session, current_user.id, input)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError:
+        raise HTTPException(status_code=502, detail="AI service unavailable")
+
+    return result

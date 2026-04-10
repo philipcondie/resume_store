@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str
     jwt_token_expires: int
+    anthropic_api_key: str
     model_config = {"env_file": ".env"}
 
 
