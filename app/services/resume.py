@@ -139,3 +139,13 @@ async def get_resume_list(session: AsyncSession, user_id: int) -> list[ResumeMet
         )
         for r in resumes
     ]
+
+
+async def get_resume(session: AsyncSession, user_id: int, resume_id: int) -> ResumeData:
+    query = select(Resume.resume_data).where(
+        Resume.user_id == user_id, Resume.id == resume_id
+    )
+    resume_data = (await session.execute(query)).scalar_one_or_none()
+    if not resume_data:
+        raise LookupError(f"No resume found for id {resume_id}")
+    return ResumeData.model_validate(resume_data)

@@ -29,11 +29,19 @@ async def generate_resume(
     return result
 
 
-@resume_router.get("/all")
+@resume_router.get("/")
 async def get_resumes(
     session: SessionDep, current_user: CurrentUserDep
 ) -> list[ResumeMetadata]:
     return await resume.get_resume_list(session, current_user.id)
 
 
-# get resume
+@resume_router.get("/{resume_id}")
+async def get_resume(
+    session: SessionDep, current_user: CurrentUserDep, resume_id: int
+) -> ResumeData:
+    try:
+        result = await resume.get_resume(session, current_user.id, resume_id)
+    except LookupError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return result
