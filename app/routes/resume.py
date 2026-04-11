@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 import app.services.resume as resume
 from app.core.dependencies import CurrentUserDep, SessionDep
-from app.schemas.base import ResumeData, ResumeRequest
+from app.schemas.base import ResumeData, ResumeMetadata, ResumeRequest
 
 resume_router = APIRouter(prefix="/resume")
 
@@ -29,5 +29,11 @@ async def generate_resume(
     return result
 
 
-# get resume list
+@resume_router.get("/all")
+async def get_resumes(
+    session: SessionDep, current_user: CurrentUserDep
+) -> list[ResumeMetadata]:
+    return await resume.get_resume_list(session, current_user.id)
+
+
 # get resume

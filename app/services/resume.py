@@ -17,6 +17,7 @@ from app.schemas.base import (
     PersonalInfo,
     ProjectEntry,
     ResumeData,
+    ResumeMetadata,
     SkillEntry,
 )
 from app.services.prompt import DEFAULT_USER_PROMPT
@@ -122,3 +123,19 @@ async def generate_resume(
         raise DuplicateFilenameError(filename)
     await session.refresh(resume)
     return resume_data
+
+
+async def get_resume_list(session: AsyncSession, user_id: int) -> list[ResumeMetadata]:
+    query = select(
+        Resume.id, Resume.filename, Resume.created_at, Resume.updated_at
+    ).where(Resume.user_id == user_id)
+    resumes = (await session.execute(query)).all()
+    return [
+        ResumeMetadata(
+            id=r.id,
+            filename=r.filename,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+        )
+        for r in resumes
+    ]

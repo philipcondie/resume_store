@@ -1,7 +1,12 @@
+from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
 from pydantic.alias_generators import to_camel
+
+filename_type = Annotated[
+    str, StringConstraints(min_length=1, max_length=255, strip_whitespace=True)
+]
 
 
 class UserCreate(BaseModel):
@@ -83,7 +88,13 @@ class ResumeData(BaseModel):
 
 class ResumeRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel)
-    filename: Annotated[
-        str, StringConstraints(min_length=1, max_length=255, strip_whitespace=True)
-    ]
+    filename: filename_type
     input: LLMInput
+
+
+class ResumeMetadata(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
+    id: int
+    filename: filename_type
+    created_at: datetime
+    updated_at: datetime
