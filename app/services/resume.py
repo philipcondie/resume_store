@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.claude import client
 from app.models.base import UserPrompt
 from app.schemas.base import LLMInput, LLMOutput
-from app.services.prompts import DEFAULT_USER_PROMPT
+from app.services.prompt import DEFAULT_USER_PROMPT
 
 logger = logging.getLogger(__name__)
 

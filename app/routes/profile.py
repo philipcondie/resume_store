@@ -8,7 +8,7 @@ from app.schemas.base import (
     ProjectEntry,
     SkillEntry,
 )
-from app.services.user_data import (
+from app.services.profile import (
     get_personal_info,
     get_profile_list,
     upsert_personal_info,

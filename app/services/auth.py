@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models.base import User, UserPrompt
 from app.schemas.base import Token, UserCreate, UserCreateResponse
-from app.services.prompts import DEFAULT_USER_PROMPT
+from app.services.prompt import DEFAULT_USER_PROMPT
 
 settings = get_settings()
 password_hash = PasswordHash.recommended()
