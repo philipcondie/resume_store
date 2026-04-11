@@ -19,8 +19,34 @@ class JobEntry(BaseModel):
     role: str
     start_date: str
     end_date: str
-    location: str
+    location: str | None = None
     bullets: list[str]
+
+
+class EducationEntry(BaseModel):
+    id: str
+    school: str
+    degree: str
+    bullets: list[str]
+
+
+class ProjectEntry(BaseModel):
+    id: str
+    title: str
+    bullets: list[str]
+
+
+class SkillEntry(BaseModel):
+    id: str
+    title: str
+    text: str
+
+
+class PersonalInfo(BaseModel):
+    name: str
+    email: str
+    phonenumber: str
+    extras: list[str] | None = None
 
 
 class LLMInput(BaseModel):

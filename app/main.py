@@ -3,15 +3,15 @@ from typing import Annotated
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jwt.exceptions import InvalidTokenError
+from fastapi.security import OAuth2PasswordRequestForm
 from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.core.dependencies import CurrentUserDep, SessionDep
 from app.models.base import User, UserPrompt
+from app.routes.profile import profile_router
 from app.schemas.base import LLMInput, LLMOutput, Token, UserCreate, UserPromptUpdate
 from app.services.prompts import DEFAULT_USER_PROMPT
 from app.services.resume import send_message
@@ -20,12 +20,10 @@ from app.services.user_data import get_user_prompt, upsert_user_prompt
 settings = get_settings()
 app = FastAPI()
 
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
+app.include_router(profile_router)
 
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash("DUMMY")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
 def hash_password(password: str) -> str:
@@ -54,31 +52,6 @@ async def authenticate_user(session: AsyncSession, email: str, password: str):
         return False
     if not verify_password(password, user.hashed_password):
         return False
-    return user
-
-
-async def get_current_user(
-    session: SessionDep, token: Annotated[str, Depends(oauth2_scheme)]
-) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
-        )
-        username = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except InvalidTokenError:
-        raise credentials_exception
-
-    result = await session.scalars(select(User).where(User.email == username))
-    user = result.one_or_none()
-    if user is None:
-        raise credentials_exception
     return user
 
 
@@ -123,7 +96,7 @@ async def login(
 @app.post("/generate")
 async def generate_resume(
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: CurrentUserDep,
     input: LLMInput,
 ) -> LLMOutput:
     try:
@@ -141,7 +114,7 @@ async def generate_resume(
 @app.post("/prompt/update")
 async def update_prompt(
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: CurrentUserDep,
     prompt_update: UserPromptUpdate,
 ) -> UserPromptUpdate:
     try:
@@ -156,7 +129,7 @@ async def update_prompt(
 @app.get("/prompt")
 async def get_prompt(
     session: SessionDep,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: CurrentUserDep,
 ) -> UserPromptUpdate:
     try:
         result = await get_user_prompt(session, current_user.id)
