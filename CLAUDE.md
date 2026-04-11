@@ -38,10 +38,14 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 
 ## Architecture
 
-**Single-module FastAPI app** — all routes and auth logic live in `app/main.py` (no router splitting yet).
+### App structure
+- `app/main.py` — FastAPI app setup, router registration, and the `/generate` endpoint
+- `app/routes/` — routers split by domain: `auth.py`, `profile.py`, `prompt.py`
+- `app/services/` — business logic: `auth.py`, `user_data.py`, `resume.py`, `prompts.py`
+- `app/core/dependencies.py` — shared FastAPI dependencies (`SessionDep`, `CurrentUserDep`, `get_current_user`)
 
 ### Key flow: `/generate`
-1. `main.py` authenticates the user, receives `LLMInput` (job description, user instructions, job history)
+1. `CurrentUserDep` authenticates the user via JWT; route receives `LLMInput` (job description, user instructions, job history)
 2. `services/resume.py` loads the user's custom prompt from DB (or falls back to `DEFAULT_USER_PROMPT`), renders Jinja2 templates, calls `client.messages.parse()` with structured output (`LLMOutput`)
 3. System prompt = `base_prompt.j2` (role/instructions) + user's prompt row (tailoring rules)
 
@@ -51,9 +55,14 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 - `templates/user_message.j2` — structures user input (instructions, JD, job history) as XML
 - Each user has a `UserPrompt` row; can be updated via `/prompt/update`, reset by sending empty string
 
+### Profile system
+- `UserProfile` model stores personal info, job/education/project history, and skills as JSON columns
+- Profile list fields (jobs, education, projects, skills) return empty lists when no data exists
+- Personal info returns 404 when not yet set
+
 ### Data layer
 - Async SQLAlchemy with asyncpg; Postgres 16 via Docker Compose (port 5555)
-- Models in `models/base.py`: `User` (email, hashed_password) and `UserPrompt` (1:1 with User, stores custom prompt text)
+- Models in `models/base.py`: `User`, `UserPrompt` (1:1 with User), `UserProfile` (1:1 with User, JSON columns for profile data)
 - Pydantic schemas in `schemas/base.py` use camelCase aliases (`alias_generator=to_camel`) for frontend compatibility
 
 ### Config
