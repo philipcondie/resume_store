@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, ForeignKey, String, Text, func
+from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -39,3 +39,21 @@ class UserProfile(Base):
     education_history: Mapped[list | None] = mapped_column(JSON, default=None)
     project_history: Mapped[list | None] = mapped_column(JSON, default=None)
     skills: Mapped[list | None] = mapped_column(JSON, default=None)
+
+
+class Resume(Base):
+    __tablename__ = "resume"
+    __table_args__ = (UniqueConstraint("user_id", "filename", name="user_filename"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user_account.id", ondelete="CASCADE")
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    llm_input: Mapped[dict] = mapped_column(JSON)
+    llm_output: Mapped[dict] = mapped_column(JSON)
+    resume_data: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )

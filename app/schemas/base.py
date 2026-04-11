@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, StringConstraints
 from pydantic.alias_generators import to_camel
 
 
@@ -67,3 +69,21 @@ class LLMOutput(BaseModel):
 
 class UserPromptUpdate(BaseModel):
     prompt: str
+
+
+class ResumeData(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
+    personal_info: PersonalInfo | None
+    summary: str | None
+    job_history: list[JobEntry] | None
+    education_history: list[EducationEntry] | None
+    project_history: list[ProjectEntry] | None
+    skills: list[SkillEntry] | None
+
+
+class ResumeRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
+    filename: Annotated[
+        str, StringConstraints(min_length=1, max_length=255, strip_whitespace=True)
+    ]
+    input: LLMInput
