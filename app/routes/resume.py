@@ -45,3 +45,14 @@ async def get_resume(
     except LookupError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result
+
+
+@resume_router.put("/{resume_id}")
+async def update_resume(
+    session: SessionDep, current_user: CurrentUserDep, resume_id: int, data: ResumeData
+) -> ResumeData:
+    try:
+        result = await resume.update_resume(session, current_user.id, resume_id, data)
+    except LookupError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return result

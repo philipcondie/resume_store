@@ -149,3 +149,16 @@ async def get_resume(session: AsyncSession, user_id: int, resume_id: int) -> Res
     if not resume_data:
         raise LookupError(f"No resume found for id {resume_id}")
     return ResumeData.model_validate(resume_data)
+
+
+async def update_resume(
+    session: AsyncSession, user_id: int, resume_id: int, data: ResumeData
+) -> ResumeData:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    resume = (await session.scalars(query)).one_or_none()
+    if not resume:
+        raise LookupError(f"No resume found for id {resume_id}")
+    resume.resume_data = data.model_dump()
+    await session.commit()
+    await session.refresh(resume)
+    return ResumeData.model_validate(resume.resume_data)
