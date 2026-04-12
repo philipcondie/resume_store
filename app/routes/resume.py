@@ -10,7 +10,7 @@ resume_router = APIRouter(prefix="/resume")
 @resume_router.post("/new")
 async def generate_resume(
     session: SessionDep, current_user: CurrentUserDep, request: ResumeRequest
-) -> ResumeData:
+) -> ResumeMetadata:
     try:
         result = await resume.generate_resume(
             session, current_user.id, request.filename, request.input

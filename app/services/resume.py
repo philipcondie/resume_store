@@ -77,7 +77,7 @@ async def send_message(
 
 async def generate_resume(
     session: AsyncSession, user_id: int, filename: str, llm_input: LLMInput
-) -> ResumeData:
+) -> ResumeMetadata:
     # validate filename
     query = select(Resume).where(Resume.user_id == user_id, Resume.filename == filename)
     result = (await session.scalars(query)).one_or_none()
@@ -122,7 +122,12 @@ async def generate_resume(
         await session.rollback()
         raise DuplicateFilenameError(filename)
     await session.refresh(resume)
-    return resume_data
+    return ResumeMetadata(
+        id=resume.id,
+        filename=resume.filename,
+        created_at=resume.created_at,
+        updated_at=resume.updated_at,
+    )
 
 
 async def get_resume_list(session: AsyncSession, user_id: int) -> list[ResumeMetadata]:
