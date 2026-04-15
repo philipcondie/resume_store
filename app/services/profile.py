@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.base import UserProfile
 from app.schemas.base import PersonalInfo
 
-PROFILE_LIST_FIELDS = {"job_history", "education_history", "project_history", "skills"}
+PROFILE_LIST_FIELDS = {"jobs", "education", "projects", "skills"}
 
 
 async def _upsert_profile_field(
@@ -34,7 +34,7 @@ async def upsert_profile_list[T: BaseModel](
 ) -> list[T]:
     if field not in PROFILE_LIST_FIELDS:
         raise ValueError(f"Invalid profile field: {field}")
-    dumped = [item.model_dump() for item in items]
+    dumped = [item.model_dump(by_alias=True) for item in items]
     profile = await _upsert_profile_field(session, user_id, field, dumped)
     return [type(items[0]).model_validate(x) for x in getattr(profile, field) or []]
 
@@ -43,7 +43,7 @@ async def upsert_personal_info(
     session: AsyncSession, user_id: int, data: PersonalInfo
 ) -> PersonalInfo:
     profile = await _upsert_profile_field(
-        session, user_id, "personal_info", data.model_dump()
+        session, user_id, "personal_info", data.model_dump(by_alias=True)
     )
 
     return PersonalInfo.model_validate(profile.personal_info)

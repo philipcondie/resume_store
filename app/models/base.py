@@ -35,9 +35,9 @@ class UserProfile(Base):
         ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
     personal_info: Mapped[dict | None] = mapped_column(JSON, default=None)
-    job_history: Mapped[list | None] = mapped_column(JSON, default=None)
-    education_history: Mapped[list | None] = mapped_column(JSON, default=None)
-    project_history: Mapped[list | None] = mapped_column(JSON, default=None)
+    jobs: Mapped[list | None] = mapped_column(JSON, default=None)
+    education: Mapped[list | None] = mapped_column(JSON, default=None)
+    projects: Mapped[list | None] = mapped_column(JSON, default=None)
     skills: Mapped[list | None] = mapped_column(JSON, default=None)
 
 

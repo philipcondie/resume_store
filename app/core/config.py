@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     jwt_token_expires: int
     anthropic_api_key: str
+    cors_origins: list[str]
     model_config = {"env_file": ".env"}
 
 

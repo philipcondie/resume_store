@@ -56,3 +56,13 @@ async def update_resume(
     except LookupError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result
+
+
+@resume_router.delete("/{resume_id}")
+async def delete_resume(
+    session: SessionDep, current_user: CurrentUserDep, resume_id: int
+) -> None:
+    try:
+        await resume.delete_resume(session, current_user.id, resume_id)
+    except LookupError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

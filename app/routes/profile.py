@@ -43,43 +43,37 @@ async def set_personal_info(
 
 
 @profile_router.get("/jobs")
-async def get_job_history(
-    session: SessionDep, current_user: CurrentUserDep
-) -> list[JobEntry]:
-    return await get_profile_list(session, current_user.id, "job_history", JobEntry)
+async def get_jobs(session: SessionDep, current_user: CurrentUserDep) -> list[JobEntry]:
+    return await get_profile_list(session, current_user.id, "jobs", JobEntry)
 
 
 @profile_router.post("/jobs")
-async def set_job_history(
-    session: SessionDep, current_user: CurrentUserDep, job_history: list[JobEntry]
+async def set_jobs(
+    session: SessionDep, current_user: CurrentUserDep, jobs: list[JobEntry]
 ) -> list[JobEntry]:
     try:
-        result = await upsert_profile_list(
-            session, current_user.id, "job_history", job_history
-        )
+        result = await upsert_profile_list(session, current_user.id, "jobs", jobs)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return result
 
 
 @profile_router.get("/education")
-async def get_education_history(
+async def get_education(
     session: SessionDep, current_user: CurrentUserDep
 ) -> list[EducationEntry]:
-    return await get_profile_list(
-        session, current_user.id, "education_history", EducationEntry
-    )
+    return await get_profile_list(session, current_user.id, "education", EducationEntry)
 
 
 @profile_router.post("/education")
-async def set_education_history(
+async def set_education(
     session: SessionDep,
     current_user: CurrentUserDep,
-    education_history: list[EducationEntry],
+    education: list[EducationEntry],
 ) -> list[EducationEntry]:
     try:
         result = await upsert_profile_list(
-            session, current_user.id, "education_history", education_history
+            session, current_user.id, "education", education
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -87,23 +81,21 @@ async def set_education_history(
 
 
 @profile_router.get("/projects")
-async def get_project_history(
+async def get_projects(
     session: SessionDep, current_user: CurrentUserDep
 ) -> list[ProjectEntry]:
-    return await get_profile_list(
-        session, current_user.id, "project_history", ProjectEntry
-    )
+    return await get_profile_list(session, current_user.id, "projects", ProjectEntry)
 
 
 @profile_router.post("/projects")
-async def set_project_history(
+async def set_project(
     session: SessionDep,
     current_user: CurrentUserDep,
-    project_history: list[ProjectEntry],
+    projects: list[ProjectEntry],
 ) -> list[ProjectEntry]:
     try:
         result = await upsert_profile_list(
-            session, current_user.id, "project_history", project_history
+            session, current_user.id, "projects", projects
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

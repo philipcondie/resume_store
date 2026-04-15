@@ -98,21 +98,17 @@ async def generate_resume(
     resume_data = ResumeData(
         summary=llm_output.summary,
         personal_info=PersonalInfo.model_validate(profile.personal_info),
-        job_history=[JobEntry.model_validate(j) for j in llm_output.jobs],
-        education_history=[
-            EducationEntry.model_validate(e) for e in profile.education_history or []
-        ],
-        project_history=[
-            ProjectEntry.model_validate(p) for p in profile.project_history or []
-        ],
+        jobs=[JobEntry.model_validate(j) for j in llm_output.jobs],
+        education=[EducationEntry.model_validate(e) for e in profile.education or []],
+        projects=[ProjectEntry.model_validate(p) for p in profile.projects or []],
         skills=[SkillEntry.model_validate(s) for s in profile.skills or []],
     )
     resume = Resume(
         user_id=user_id,
         filename=filename,
-        llm_input=llm_input.model_dump(),
-        llm_output=llm_output.model_dump(),
-        resume_data=resume_data.model_dump(),
+        llm_input=llm_input.model_dump(by_alias=True),
+        llm_output=llm_output.model_dump(by_alias=True),
+        resume_data=resume_data.model_dump(by_alias=True),
     )
 
     session.add(resume)
@@ -163,7 +159,16 @@ async def update_resume(
     resume = (await session.scalars(query)).one_or_none()
     if not resume:
         raise LookupError(f"No resume found for id {resume_id}")
-    resume.resume_data = data.model_dump()
+    resume.resume_data = data.model_dump(by_alias=True)
     await session.commit()
     await session.refresh(resume)
     return ResumeData.model_validate(resume.resume_data)
+
+
+async def delete_resume(session: AsyncSession, user_id: int, resume_id: int) -> None:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    resume = (await session.scalars(query)).one_or_none()
+    if not resume:
+        raise LookupError(f"No resume found for id {resume_id}")
+    await session.delete(resume)
+    await session.commit()

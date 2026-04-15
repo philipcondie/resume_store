@@ -6,8 +6,8 @@
     {{ job_description }}
 </job_description>
 
-<job_history>
-{%- for job in job_history %}
+<jobs>
+{%- for job in jobs %}
     <job>
         <job_id>{{ job.id }}</job_id>
         <company>{{ job.company }}</company>
@@ -21,4 +21,4 @@
         {%- endfor %}
     </job>
 {%- endfor %}
-</job_history>
+</jobs>
