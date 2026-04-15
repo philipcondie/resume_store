@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     database_url: str
     environment: str
+    invite_code: str
     jwt_secret: str
     jwt_algorithm: str
     jwt_token_expires: int

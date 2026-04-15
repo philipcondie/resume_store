@@ -4,18 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.dependencies import SessionDep
-from app.schemas.base import Token, UserCreate, UserCreateResponse
+from app.schemas.base import Token, UserCreate
 from app.services import auth as auth_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@auth_router.post("/create_user")
-async def create_user(session: SessionDep, user: UserCreate) -> UserCreateResponse:
+@auth_router.post("/signup")
+async def create_user(session: SessionDep, user: UserCreate) -> Token:
     try:
         result = await auth_service.create_user(session, user)
     except LookupError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return result
 
 

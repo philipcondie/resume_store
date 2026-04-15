@@ -10,8 +10,10 @@ filename_type = Annotated[
 
 
 class UserCreate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
     email: str
     password: str
+    invite_code: str
 
 
 class UserCreateResponse(BaseModel):

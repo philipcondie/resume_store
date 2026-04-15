@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.base import User, UserPrompt
-from app.schemas.base import Token, UserCreate, UserCreateResponse
+from app.schemas.base import Token, UserCreate
 from app.services.prompt import DEFAULT_USER_PROMPT
 
 settings = get_settings()
@@ -44,7 +44,10 @@ async def authenticate_user(session: AsyncSession, email: str, password: str):
     return user
 
 
-async def create_user(session: AsyncSession, user: UserCreate) -> UserCreateResponse:
+async def create_user(session: AsyncSession, user: UserCreate) -> Token:
+    # check if the user gave the new user code
+    if user.invite_code != settings.invite_code:
+        raise ValueError("Incorrect code")
     # hash password, then create user
     hashed_password = hash_password(user.password)
     result = await session.scalars(select(User).where(User.email == user.email))
@@ -57,7 +60,11 @@ async def create_user(session: AsyncSession, user: UserCreate) -> UserCreateResp
     session.add(UserPrompt(user_id=user_new.id, prompt=DEFAULT_USER_PROMPT))
     await session.commit()
     await session.refresh(user_new)
-    return UserCreateResponse(email=user.email)
+    access_token_expires = timedelta(minutes=settings.jwt_token_expires)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return Token(access_token=access_token, token_type="bearer")
 
 
 async def login(session: AsyncSession, email: str, password: str) -> Token:
