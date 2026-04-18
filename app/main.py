@@ -8,7 +8,6 @@ from app.routes.profile import profile_router
 from app.routes.prompt import prompt_router
 from app.routes.resume import resume_router
 
-raise Exception("Boom")
 settings = get_settings()
 origins = settings.cors_origins
 methods = ["*"] if settings.environment == "dev" else ["GET", "PUT", "POST", "DELETE"]
