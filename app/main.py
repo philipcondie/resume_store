@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.routes.auth import auth_router
+from app.routes.health import health_router
 from app.routes.profile import profile_router
 from app.routes.prompt import prompt_router
 from app.routes.resume import resume_router
@@ -24,3 +25,4 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(prompt_router)
 app.include_router(resume_router)
+app.include_router(health_router)
