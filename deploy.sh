@@ -42,8 +42,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
     exit 1                                                                                               
 fi
 
-log "pushing to origin"                
-git push
+# log "pushing to origin"                
+# git push
 
 log "recording current remote SHA for potential rollback"                                                
 PREVIOUS_SHA=$(ssh "$SERVER" "cd $REMOTE_PATH && git rev-parse HEAD")
