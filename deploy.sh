@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # --- config ---                                                                                         
-SERVER="philip@resume-store"
-REMOTE_PATH="/home/philip/resume-store"                                                                             
+SERVER="philip@resume_store"
+REMOTE_PATH="/home/philip/resume_store"                                                                             
 HEALTH_URL="https://resume-api.philcondie.com/health"                                                    
 HEALTH_TIMEOUT=60                                                                                        
 COMPOSE_FILE="docker-compose.prod.yml"                                                                   
