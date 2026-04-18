@@ -1,0 +1,90 @@
+name: Deploy to production
+                                                                                                                                                                                                                            
+on:
+  push:                                                                                                                                                                                                                   
+    branches: [main]                   
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVER: philip@${{ secrets.DEPLOY_HOST }}
+      HEALTH_URL: https://resume-api.philcondie.com/health                                                                                                                                                                
+      HEALTH_TIMEOUT: 60                                                                                                                                                                                                  
+      REMOTE_PATH: /home/philip/resume-store                                                                                                                                                                              
+      COMPOSE_FILE: docker-compose.prod.yml                                                                                                                                                                               
+                                                                                                                                                                                                                          
+    steps:                             
+      - name: Checkout code                                                                                                                                                                                               
+        uses: actions/checkout@v4      
+        with:                                                                                                                                                                                                             
+          fetch-depth: 0   # we need full history to find the previous commit for rollback
+                                                                                                                                                                                                                          
+      - name: Set up SSH               
+        run: |                                                                                                                                                                                                            
+          mkdir -p ~/.ssh              
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519                                                                                                                                                                                     
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts                                                                                                                                               
+                                                                                                                                                                                                                          
+      - name: Record previous SHA for rollback                                                                                                                                                                            
+        id: previous                                                                                                                                                                                                      
+        run: |
+          PREVIOUS_SHA=$(ssh "$SERVER" "cd $REMOTE_PATH && git rev-parse HEAD")
+          echo "sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT                                                                                                                                                             
+                                                                                                                                                                                                                          
+      - name: Deploy                                                                                                                                                                                                      
+        run: |
+          ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build"                                                                                                                                                              
+                                                                                                                                                                                                                          
+      - name: Health check                                                                                                                                                                                                
+        id: health                                                                                                                                                                                                        
+        run: |                         
+          url="$HEALTH_URL"                                                                                        
+          timeout="$HEALTH_TIMEOUT"                                                                                
+          start=$(date +%s)                      
+          deadline=$((start + timeout))                                                                            
+          attempt=1                              
+                                                                                                                  
+          while [[ $(date +%s) -lt $deadline ]]; do
+              http_code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")                             
+              if [[ "$http_code" == "200" ]]; then                                                                 
+                  echo "healthy"
+                  exit 0                                                                                           
+              fi                                 
+              echo "attempt $attempt: got $http_code"
+              sleep 2                                                                                              
+              ((attempt++))
+          done                                                                                                     
+                                                
+          echo "timeout after ${timeout}s"
+          exit 1                                                                                                                                                                            
+                                                                                                                                                                                                                          
+      - name: Rollback on failure                                                                                                                                                                                         
+        if: failure() && steps.previous.outputs.sha != ''                                                                                                                                                                 
+        run: |                                                                                                                                                                                                            
+          ssh "$SERVER" "cd $REMOTE_PATH && git reset --hard ${{ steps.previous.outputs.sha }} && docker compose -f $COMPOSE_FILE up -d --build"
+      
+      - name: Health check on rollback
+        if: failure()
+        run: |
+          url="$HEALTH_URL"                                                                                        
+          timeout="$HEALTH_TIMEOUT"                                                                                
+          start=$(date +%s)                      
+          deadline=$((start + timeout))                                                                            
+          attempt=1                              
+                                                                                                                  
+          while [[ $(date +%s) -lt $deadline ]]; do
+              http_code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")                             
+              if [[ "$http_code" == "200" ]]; then                                                                 
+                  echo "healthy"
+                  exit 0                                                                                           
+              fi                                 
+              echo "attempt $attempt: got $http_code"
+              sleep 2                                                                                              
+              ((attempt++))
+          done                                                                                                     
+                                                
+          echo "timeout after ${timeout}s"
+          exit 1
