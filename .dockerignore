@@ -1,0 +1,11 @@
+.env
+.env.*
+.venv/
+__pycache__/
+.git
+*.pyc
+tests/
+.ruff_cache
+CLAUDE.md
+README.md
+.gitignore

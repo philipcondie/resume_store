@@ -39,21 +39,34 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 ## Architecture
 
 ### App structure
-- `app/main.py` — FastAPI app setup, router registration, and the `/generate` endpoint
-- `app/routes/` — routers split by domain: `auth.py`, `profile.py`, `prompt.py`
+- `app/main.py` — FastAPI app setup, CORS middleware (environment-aware), router registration
+- `app/routes/` — routers split by domain: `auth.py`, `profile.py`, `prompt.py`, `resume.py`
 - `app/services/` — business logic: `auth.py`, `user_data.py`, `resume.py`, `prompts.py`
 - `app/core/dependencies.py` — shared FastAPI dependencies (`SessionDep`, `CurrentUserDep`, `get_current_user`)
 
-### Key flow: `/generate`
-1. `CurrentUserDep` authenticates the user via JWT; route receives `LLMInput` (job description, user instructions, job history)
-2. `services/resume.py` loads the user's custom prompt from DB (or falls back to `DEFAULT_USER_PROMPT`), renders Jinja2 templates, calls `client.messages.parse()` with structured output (`LLMOutput`)
+### Key flow: `POST /resume/new`
+1. `CurrentUserDep` authenticates the user via JWT; route receives `ResumeRequest` (filename + `LLMInput`)
+2. `services/resume.py` validates filename uniqueness, loads the user's `UserProfile` (requires personal info), then calls `send_message()` which renders Jinja2 templates, loads the custom prompt (or falls back to `DEFAULT_USER_PROMPT`), and calls `client.messages.parse()` with structured output (`LLMOutput`)
 3. System prompt = `base_prompt.j2` (role/instructions) + user's prompt row (tailoring rules)
+4. LLM output is combined with profile data (personal info, education, projects, skills) into a `ResumeData` composite, persisted as a `Resume` row, and `ResumeMetadata` (id, filename, timestamps) is returned
+
+### Auth system
+- Registration (`POST /auth/new`) requires an `invite_code` and returns a `Token` directly (user is logged in on signup)
+- A `UserPrompt` row with the default prompt is created automatically on registration
+- Constant-time dummy hash comparison on failed lookups to prevent user enumeration
 
 ### Prompt system
 - `templates/base_prompt.j2` — core system instructions (what the AI does)
 - `templates/default_user_prompt.j2` — default tailoring rules, loaded at import time via `services/prompts.py`
 - `templates/user_message.j2` — structures user input (instructions, JD, job history) as XML
 - Each user has a `UserPrompt` row; can be updated via `/prompt/update`, reset by sending empty string
+
+### Resume system
+- Full CRUD via `app/routes/resume.py`: `POST /resume/new`, `GET /resume/`, `GET /resume/{id}`, `PUT /resume/{id}`, `DELETE /resume/{id}`
+- `Resume` model stores `llm_input`, `llm_output`, and `resume_data` as JSON columns, plus `filename` (unique per user via DB constraint)
+- `ResumeData` is the composite schema: personal info + summary + jobs + education + projects + skills
+- `ResumeMetadata` (id, filename, created_at, updated_at) is returned from generate and list endpoints
+- Custom `DuplicateFilenameError` raised on filename conflicts
 
 ### Profile system
 - `UserProfile` model stores personal info, job/education/project history, and skills as JSON columns
@@ -62,11 +75,11 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 
 ### Data layer
 - Async SQLAlchemy with asyncpg; Postgres 16 via Docker Compose (port 5555)
-- Models in `models/base.py`: `User`, `UserPrompt` (1:1 with User), `UserProfile` (1:1 with User, JSON columns for profile data)
+- Models in `models/base.py`: `User`, `UserPrompt` (1:1 with User), `UserProfile` (1:1 with User, JSON columns for profile data), `Resume` (many per User, unique filename per user)
 - Pydantic schemas in `schemas/base.py` use camelCase aliases (`alias_generator=to_camel`) for frontend compatibility
 
 ### Config
-All settings loaded from `.env` via pydantic-settings (`core/config.py`): `DATABASE_URL`, `ENVIRONMENT`, `JWT_SECRET`, `JWT_ALGORITHM`, `JWT_TOKEN_EXPIRES`, `ANTHROPIC_API_KEY`.
+All settings loaded from `.env` via pydantic-settings (`core/config.py`): `DATABASE_URL`, `ENVIRONMENT`, `INVITE_CODE`, `JWT_SECRET`, `JWT_ALGORITHM`, `JWT_TOKEN_EXPIRES`, `ANTHROPIC_API_KEY`, `CORS_ORIGINS`.
 
 ## Style
 
