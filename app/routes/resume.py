@@ -29,7 +29,7 @@ async def generate_resume(
     return result
 
 
-@resume_router.get("/")
+@resume_router.get("")
 async def get_resumes(
     session: SessionDep, current_user: CurrentUserDep
 ) -> list[ResumeMetadata]:
