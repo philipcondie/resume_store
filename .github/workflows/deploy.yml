@@ -11,7 +11,7 @@ jobs:
     env:
       SERVER: philip@${{ secrets.DEPLOY_HOST }}
       HEALTH_URL: https://resume-api.philcondie.com/health                                                                                                                                                                
-      HEALTH_TIMEOUT: 60                                                                                                                                                                                                  
+      HEALTH_TIMEOUT: 120                                                                                                                                                                                              
       REMOTE_PATH: /home/philip/resume_store                                                                                                                                                                              
       COMPOSE_FILE: docker-compose.prod.yml                                                                                                                                                                               
                                                                                                                                                                                                                           
@@ -34,9 +34,9 @@ jobs:
           PREVIOUS_SHA=$(ssh "$SERVER" "cd $REMOTE_PATH && git rev-parse HEAD")
           echo "sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT                                                                                                                                                             
                                                                                                                                                                                                                           
-      - name: Deploy                                                                                                                                                                                                      
+      - name: Deploy
         run: |
-          ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build"                                                                                                                                                              
+          ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build app && docker compose -f $COMPOSE_FILE exec -T caddy caddy reload --config /etc/caddy/Caddyfile"                                                                                                                                                              
                                                                                                                                                                                                                           
       - name: Health check                                                                                                                                                                                                
         id: health                                                                                                                                                                                                        
@@ -61,10 +61,10 @@ jobs:
           echo "timeout after ${timeout}s"
           exit 1                                                                                                                                                                            
                                                                                                                                                                                                                           
-      - name: Rollback on failure                                                                                                                                                                                         
-        if: failure() && steps.previous.outputs.sha != ''                                                                                                                                                                 
-        run: |                                                                                                                                                                                                            
-          ssh "$SERVER" "cd $REMOTE_PATH && git reset --hard ${{ steps.previous.outputs.sha }} && docker compose -f $COMPOSE_FILE up -d --build"
+      - name: Rollback on failure
+        if: failure() && steps.previous.outputs.sha != ''
+        run: |
+          ssh "$SERVER" "cd $REMOTE_PATH && git reset --hard ${{ steps.previous.outputs.sha }} && docker compose -f $COMPOSE_FILE up -d --build app && docker compose -f $COMPOSE_FILE exec -T caddy caddy reload --config /etc/caddy/Caddyfile"
       
       - name: Health check on rollback
         if: failure()
