@@ -100,6 +100,11 @@ class ResumeRequest(BaseModel):
     input: LLMInput
 
 
+class ResumeDuplicateRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    filename: filename_type
+
+
 class ResumeMetadata(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     id: int

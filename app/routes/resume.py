@@ -2,7 +2,12 @@ from fastapi import APIRouter, HTTPException, status
 
 import app.services.resume as resume
 from app.core.dependencies import CurrentUserDep, SessionDep
-from app.schemas.base import ResumeData, ResumeMetadata, ResumeRequest
+from app.schemas.base import (
+    ResumeData,
+    ResumeDuplicateRequest,
+    ResumeMetadata,
+    ResumeRequest,
+)
 
 resume_router = APIRouter(prefix="/resume")
 
@@ -66,3 +71,24 @@ async def delete_resume(
         await resume.delete_resume(session, current_user.id, resume_id)
     except LookupError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@resume_router.post("/{resume_id}/duplicate")
+async def duplicate_resume(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    resume_id: int,
+    request: ResumeDuplicateRequest,
+) -> ResumeMetadata:
+    try:
+        result = await resume.duplicate_resume(
+            session, current_user.id, resume_id, request.filename
+        )
+    except resume.DuplicateFilenameError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return result
