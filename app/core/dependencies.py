@@ -18,7 +18,7 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 async def get_current_user(
     session: SessionDep,
-    token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="/login"))],
+    token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="/auth/login"))],
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

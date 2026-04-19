@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, status
 
 import app.services.resume as resume
@@ -38,7 +40,7 @@ async def get_resumes(
 
 @resume_router.get("/{resume_id}")
 async def get_resume(
-    session: SessionDep, current_user: CurrentUserDep, resume_id: int
+    session: SessionDep, current_user: CurrentUserDep, resume_id: uuid.UUID
 ) -> ResumeData:
     try:
         result = await resume.get_resume(session, current_user.id, resume_id)
@@ -49,7 +51,10 @@ async def get_resume(
 
 @resume_router.put("/{resume_id}")
 async def update_resume(
-    session: SessionDep, current_user: CurrentUserDep, resume_id: int, data: ResumeData
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    resume_id: uuid.UUID,
+    data: ResumeData,
 ) -> ResumeData:
     try:
         result = await resume.update_resume(session, current_user.id, resume_id, data)
@@ -60,7 +65,7 @@ async def update_resume(
 
 @resume_router.delete("/{resume_id}")
 async def delete_resume(
-    session: SessionDep, current_user: CurrentUserDep, resume_id: int
+    session: SessionDep, current_user: CurrentUserDep, resume_id: uuid.UUID
 ) -> None:
     try:
         await resume.delete_resume(session, current_user.id, resume_id)

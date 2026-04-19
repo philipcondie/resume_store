@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -10,7 +12,7 @@ PROFILE_LIST_FIELDS = {"jobs", "education", "projects", "skills"}
 
 
 async def _upsert_profile_field(
-    session: AsyncSession, user_id: int, field: str, value: object
+    session: AsyncSession, user_id: uuid.UUID, field: str, value: object
 ) -> UserProfile:
     """Upsert a single field on UserProfile. Returns the refreshed profile."""
     query = select(UserProfile).where(UserProfile.user_id == user_id)
@@ -30,7 +32,7 @@ async def _upsert_profile_field(
 
 
 async def upsert_profile_list[T: BaseModel](
-    session: AsyncSession, user_id: int, field: str, items: list[T]
+    session: AsyncSession, user_id: uuid.UUID, field: str, items: list[T]
 ) -> list[T]:
     if field not in PROFILE_LIST_FIELDS:
         raise ValueError(f"Invalid profile field: {field}")
@@ -40,7 +42,7 @@ async def upsert_profile_list[T: BaseModel](
 
 
 async def upsert_personal_info(
-    session: AsyncSession, user_id: int, data: PersonalInfo
+    session: AsyncSession, user_id: uuid.UUID, data: PersonalInfo
 ) -> PersonalInfo:
     profile = await _upsert_profile_field(
         session, user_id, "personal_info", data.model_dump(by_alias=True)
@@ -49,14 +51,16 @@ async def upsert_personal_info(
     return PersonalInfo.model_validate(profile.personal_info)
 
 
-async def _get_profile_field(session: AsyncSession, user_id: int) -> UserProfile | None:
+async def _get_profile_field(
+    session: AsyncSession, user_id: uuid.UUID
+) -> UserProfile | None:
     query = select(UserProfile).where(UserProfile.user_id == user_id)
     profile = (await session.scalars(query)).one_or_none()
     return profile
 
 
 async def get_profile_list[T: BaseModel](
-    session: AsyncSession, user_id: int, field: str, model: type[T]
+    session: AsyncSession, user_id: uuid.UUID, field: str, model: type[T]
 ) -> list[T]:
     if field not in PROFILE_LIST_FIELDS:
         raise ValueError(f"Invalid profile field: {field}")
@@ -66,7 +70,7 @@ async def get_profile_list[T: BaseModel](
     return [model.model_validate(x) for x in getattr(profile, field) or []]
 
 
-async def get_personal_info(session: AsyncSession, user_id: int) -> PersonalInfo:
+async def get_personal_info(session: AsyncSession, user_id: uuid.UUID) -> PersonalInfo:
     profile = await _get_profile_field(session, user_id)
     if not profile or not profile.personal_info:
         raise LookupError(f"No personal info found for user {user_id}")
