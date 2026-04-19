@@ -12,7 +12,7 @@ jobs:
       SERVER: philip@${{ secrets.DEPLOY_HOST }}
       HEALTH_URL: https://resume-api.philcondie.com/health                                                                                                                                                                
       HEALTH_TIMEOUT: 60                                                                                                                                                                                                  
-      REMOTE_PATH: /home/philip/resume-store                                                                                                                                                                              
+      REMOTE_PATH: /home/philip/resume_store                                                                                                                                                                              
       COMPOSE_FILE: docker-compose.prod.yml                                                                                                                                                                               
                                                                                                                                                                                                                           
     steps:                             
