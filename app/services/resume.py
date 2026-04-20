@@ -182,7 +182,7 @@ async def delete_resume(
 
 
 async def duplicate_resume(
-    session: AsyncSession, user_id: int, resume_id: int, filename: str
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID, filename: str
 ) -> ResumeMetadata:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     source = (await session.scalars(query)).one_or_none()

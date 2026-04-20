@@ -82,7 +82,7 @@ async def delete_resume(
 async def duplicate_resume(
     session: SessionDep,
     current_user: CurrentUserDep,
-    resume_id: int,
+    resume_id: uuid.UUID,
     request: ResumeDuplicateRequest,
 ) -> ResumeMetadata:
     try:
