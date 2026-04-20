@@ -179,3 +179,32 @@ async def delete_resume(
         raise LookupError(f"No resume found for id {resume_id}")
     await session.delete(resume)
     await session.commit()
+
+
+async def duplicate_resume(
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID, filename: str
+) -> ResumeMetadata:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    source = (await session.scalars(query)).one_or_none()
+    if not source:
+        raise LookupError(f"No resume found for id {resume_id}")
+    new_resume = Resume(
+        user_id=user_id,
+        filename=filename,
+        llm_input=source.llm_input,
+        llm_output=source.llm_output,
+        resume_data=source.resume_data,
+    )
+    session.add(new_resume)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise DuplicateFilenameError(filename)
+    await session.refresh(new_resume)
+    return ResumeMetadata(
+        id=new_resume.id,
+        filename=new_resume.filename,
+        created_at=new_resume.created_at,
+        updated_at=new_resume.updated_at,
+    )
