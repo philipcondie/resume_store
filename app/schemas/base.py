@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import Annotated
 
@@ -107,7 +108,7 @@ class ResumeDuplicateRequest(BaseModel):
 
 class ResumeMetadata(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    id: int
+    id: uuid.UUID
     filename: filename_type
     created_at: datetime
     updated_at: datetime

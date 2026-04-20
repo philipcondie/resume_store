@@ -1,4 +1,5 @@
 import logging
+import uuid
 from pathlib import Path
 
 from anthropic import APIError
@@ -38,7 +39,7 @@ class DuplicateFilenameError(Exception):
 
 
 async def send_message(
-    session: AsyncSession, user_id: int, input: LLMInput
+    session: AsyncSession, user_id: uuid.UUID, input: LLMInput
 ) -> LLMOutput:
     # get base prompt
     base_prompt = base_prompt_template.render()
@@ -76,7 +77,7 @@ async def send_message(
 
 
 async def generate_resume(
-    session: AsyncSession, user_id: int, filename: str, llm_input: LLMInput
+    session: AsyncSession, user_id: uuid.UUID, filename: str, llm_input: LLMInput
 ) -> ResumeMetadata:
     # validate filename
     query = select(Resume).where(Resume.user_id == user_id, Resume.filename == filename)
@@ -126,7 +127,9 @@ async def generate_resume(
     )
 
 
-async def get_resume_list(session: AsyncSession, user_id: int) -> list[ResumeMetadata]:
+async def get_resume_list(
+    session: AsyncSession, user_id: uuid.UUID
+) -> list[ResumeMetadata]:
     query = select(
         Resume.id, Resume.filename, Resume.created_at, Resume.updated_at
     ).where(Resume.user_id == user_id)
@@ -142,7 +145,9 @@ async def get_resume_list(session: AsyncSession, user_id: int) -> list[ResumeMet
     ]
 
 
-async def get_resume(session: AsyncSession, user_id: int, resume_id: int) -> ResumeData:
+async def get_resume(
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
+) -> ResumeData:
     query = select(Resume.resume_data).where(
         Resume.user_id == user_id, Resume.id == resume_id
     )
@@ -153,7 +158,7 @@ async def get_resume(session: AsyncSession, user_id: int, resume_id: int) -> Res
 
 
 async def update_resume(
-    session: AsyncSession, user_id: int, resume_id: int, data: ResumeData
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID, data: ResumeData
 ) -> ResumeData:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
@@ -165,7 +170,9 @@ async def update_resume(
     return ResumeData.model_validate(resume.resume_data)
 
 
-async def delete_resume(session: AsyncSession, user_id: int, resume_id: int) -> None:
+async def delete_resume(
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
+) -> None:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
     if not resume:

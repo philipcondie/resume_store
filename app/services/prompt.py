@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 
 from sqlalchemy import select
@@ -12,7 +13,9 @@ DEFAULT_USER_PROMPT = (
 ).read_text()
 
 
-async def get_user_prompt(session: AsyncSession, user_id: int) -> UserPromptUpdate:
+async def get_user_prompt(
+    session: AsyncSession, user_id: uuid.UUID
+) -> UserPromptUpdate:
     query = select(UserPrompt).where(UserPrompt.user_id == user_id)
     user_prompt = (await session.scalars(query)).one_or_none()
     if not user_prompt:
@@ -21,7 +24,7 @@ async def get_user_prompt(session: AsyncSession, user_id: int) -> UserPromptUpda
 
 
 async def upsert_user_prompt(
-    session: AsyncSession, user_id: int, prompt_update: UserPromptUpdate
+    session: AsyncSession, user_id: uuid.UUID, prompt_update: UserPromptUpdate
 ) -> UserPromptUpdate:
     # get prompt. If no text is included then use to default prompt
     prompt_new = prompt_update.prompt.strip() or DEFAULT_USER_PROMPT
