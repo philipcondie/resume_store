@@ -11,7 +11,7 @@
     <job>
         <job_id>{{ job.id }}</job_id>
         <company>{{ job.company }}</company>
-        <job_title>{{ job.job_title }}</job_title>
+        <job_title>{{ job.role }}</job_title>
         <start_date>{{ job.start_date }}</start_date>
         <end_date>{{ job.end_date }}</end_date>
         {%- for bullet in job.bullets%}
