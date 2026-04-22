@@ -50,8 +50,8 @@ async def send_message(
     user_prompt = result.one_or_none()
     if not user_prompt:
         logger.warning(
-            "No user prompt record for user_id=%s; falling back to default prompt",
-            user_id,
+            "user_prompt_missing",
+            extra={"user_id": str(user_id)},
         )
     prompt_text = user_prompt.prompt if user_prompt else DEFAULT_USER_PROMPT
     system_prompt = base_prompt + "\n\n" + prompt_text
@@ -68,29 +68,55 @@ async def send_message(
             output_config={"effort": "medium"},
             output_format=LLMOutput,
         )
-    except APIError as e:
-        raise RuntimeError("Anthropic API call failed") from e
+    except APIError:
+        logger.exception("anthropic_api_error", extra={"user_id": str(user_id)})
+        raise RuntimeError("Anthropic API call failed")
 
     if not response.parsed_output:
+        logger.error(
+            "parsed_output_missing",
+            extra={"user_id": str(user_id), "response_id": str(response.id)},
+        )
         raise RuntimeError("Anthropic API response missing parsed output")
+    logger.info(
+        "anthropic_api_succeeded",
+        extra={
+            "input_tokens": response.usage.input_tokens,
+            "output_tokens": response.usage.output_tokens,
+        },
+    )
     return response.parsed_output
 
 
 async def generate_resume(
     session: AsyncSession, user_id: uuid.UUID, filename: str, llm_input: LLMInput
 ) -> ResumeMetadata:
+    logger.info(
+        "resume_generation_started",
+        extra={"user_id": str(user_id), "filename": filename},
+    )
     # validate filename
     query = select(Resume).where(Resume.user_id == user_id, Resume.filename == filename)
     result = (await session.scalars(query)).one_or_none()
     if result:
+        logger.warning(
+            "resume_generation_failed",
+            extra={
+                "user_id": str(user_id),
+                "filename": filename,
+                "reason": "duplicate_filename",
+            },
+        )
         raise DuplicateFilenameError(filename)
 
     # verify user exists and get profile data
     profile_query = select(UserProfile).where(UserProfile.user_id == user_id)
     profile = (await session.scalars(profile_query)).one_or_none()
     if not profile:
+        logger.warning("profile_not_found", extra={"user_id": str(user_id)})
         raise LookupError(f"No profile found for user {user_id}")
     if not profile.personal_info:
+        logger.warning("personal_info_not_found", extra={"user_id": str(user_id)})
         raise ValueError(f"No personal info found for user {user_id}")
     # get llm output
     llm_output = await send_message(session, user_id, llm_input)
@@ -117,8 +143,24 @@ async def generate_resume(
         await session.commit()
     except IntegrityError:
         await session.rollback()
+        logger.warning(
+            "resume_generation_failed",
+            extra={
+                "user_id": str(user_id),
+                "filename": filename,
+                "reason": "duplicate_filename",
+            },
+        )
         raise DuplicateFilenameError(filename)
     await session.refresh(resume)
+    logger.info(
+        "resume_generated",
+        extra={
+            "user_id": str(user_id),
+            "filename": filename,
+            "resume_id": str(resume.id),
+        },
+    )
     return ResumeMetadata(
         id=resume.id,
         filename=resume.filename,
