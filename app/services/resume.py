@@ -91,10 +91,6 @@ async def send_message(
 async def generate_resume(
     session: AsyncSession, user_id: uuid.UUID, filename: str, llm_input: LLMInput
 ) -> ResumeMetadata:
-    logger.info(
-        "resume_generation_started",
-        extra={"user_id": str(user_id), "filename": filename},
-    )
     # validate filename
     query = select(Resume).where(Resume.user_id == user_id, Resume.filename == filename)
     result = (await session.scalars(query)).one_or_none()
@@ -176,6 +172,9 @@ async def get_resume_list(
         Resume.id, Resume.filename, Resume.created_at, Resume.updated_at
     ).where(Resume.user_id == user_id)
     resumes = (await session.execute(query)).all()
+    logger.info(
+        "resumes_listed", extra={"user_id": str(user_id), "count": len(resumes)}
+    )
     return [
         ResumeMetadata(
             id=r.id,
@@ -195,7 +194,18 @@ async def get_resume(
     )
     resume_data = (await session.execute(query)).scalar_one_or_none()
     if not resume_data:
+        logger.warning(
+            "resume_get_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
         raise LookupError(f"No resume found for id {resume_id}")
+    logger.info(
+        "resume_retrieved", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
+    )
     return ResumeData.model_validate(resume_data)
 
 
@@ -205,10 +215,21 @@ async def update_resume(
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
     if not resume:
+        logger.warning(
+            "resume_update_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
         raise LookupError(f"No resume found for id {resume_id}")
     resume.resume_data = data.model_dump(by_alias=True)
     await session.commit()
     await session.refresh(resume)
+    logger.info(
+        "resume_updated", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
+    )
     return ResumeData.model_validate(resume.resume_data)
 
 
@@ -218,9 +239,21 @@ async def delete_resume(
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
     if not resume:
+        logger.warning(
+            "resume_delete_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
         raise LookupError(f"No resume found for id {resume_id}")
     await session.delete(resume)
     await session.commit()
+    logger.info(
+        "resume_deleted",
+        extra={"user_id": str(user_id), "resume_id": str(resume_id)},
+    )
 
 
 async def duplicate_resume(
@@ -229,6 +262,14 @@ async def duplicate_resume(
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     source = (await session.scalars(query)).one_or_none()
     if not source:
+        logger.warning(
+            "resume_duplicate_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
         raise LookupError(f"No resume found for id {resume_id}")
     new_resume = Resume(
         user_id=user_id,
@@ -242,8 +283,24 @@ async def duplicate_resume(
         await session.commit()
     except IntegrityError:
         await session.rollback()
+        logger.warning(
+            "resume_duplicate_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "duplicate_filename",
+            },
+        )
         raise DuplicateFilenameError(filename)
     await session.refresh(new_resume)
+    logger.info(
+        "resume_duplicated",
+        extra={
+            "user_id": str(user_id),
+            "resume_id": str(new_resume.id),
+            "filename": new_resume.filename,
+        },
+    )
     return ResumeMetadata(
         id=new_resume.id,
         filename=new_resume.filename,
