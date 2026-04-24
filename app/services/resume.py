@@ -99,7 +99,7 @@ async def generate_resume(
             "resume_generation_failed",
             extra={
                 "user_id": str(user_id),
-                "filename": filename,
+                "file_name": filename,
                 "reason": "duplicate_filename",
             },
         )
@@ -143,7 +143,7 @@ async def generate_resume(
             "resume_generation_failed",
             extra={
                 "user_id": str(user_id),
-                "filename": filename,
+                "file_name": filename,
                 "reason": "duplicate_filename",
             },
         )
@@ -153,7 +153,7 @@ async def generate_resume(
         "resume_generated",
         extra={
             "user_id": str(user_id),
-            "filename": filename,
+            "file_name": filename,
             "resume_id": str(resume.id),
         },
     )
@@ -298,7 +298,7 @@ async def duplicate_resume(
         extra={
             "user_id": str(user_id),
             "resume_id": str(new_resume.id),
-            "filename": new_resume.filename,
+            "file_name": new_resume.filename,
         },
     )
     return ResumeMetadata(

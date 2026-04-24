@@ -33,5 +33,9 @@ def configure_logging(level: str = "INFO") -> None:
     root.addHandler(handler)
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("anthropic").setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
     logging.getLogger(__name__).info("logging configured", extra={"log_level": level})

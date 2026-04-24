@@ -3,9 +3,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.core.config import get_settings
 
 settings = get_settings()
-engine = create_async_engine(
-    url=settings.database_url, echo=(settings.environment == "dev")
-)
+engine = create_async_engine(url=settings.database_url)
 
 SessionLocal = async_sessionmaker(engine)
 
