@@ -9,6 +9,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.claude import client
+from app.core.exceptions import (
+    DuplicateFilenameError,
+    IncompleteResumeInputError,
+    ResourceNotFoundError,
+)
 from app.models.base import Resume, UserProfile, UserPrompt
 from app.schemas.base import (
     EducationEntry,
@@ -29,13 +34,6 @@ prompt_template_dir = Path(__file__).parent.parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(prompt_template_dir))
 base_prompt_template = jinja_env.get_template("base_prompt.j2")
 user_message_template = jinja_env.get_template("user_message.j2")
-
-
-class DuplicateFilenameError(Exception):
-    """Excpection for when a user tries to add a duplicate filename"""
-
-    def __init__(self, filename):
-        super().__init__(f"Filename ({filename}) already exists")
 
 
 async def send_message(
@@ -108,12 +106,9 @@ async def generate_resume(
     # verify user exists and get profile data
     profile_query = select(UserProfile).where(UserProfile.user_id == user_id)
     profile = (await session.scalars(profile_query)).one_or_none()
-    if not profile:
-        logger.warning("profile_not_found", extra={"user_id": str(user_id)})
-        raise LookupError(f"No profile found for user {user_id}")
-    if not profile.personal_info:
-        logger.warning("personal_info_not_found", extra={"user_id": str(user_id)})
-        raise ValueError(f"No personal info found for user {user_id}")
+    if not profile or not profile.personal_info:
+        logger.warning("resume_input_incomplete", extra={"user_id": str(user_id)})
+        raise IncompleteResumeInputError(identifier=str(user_id))
     # get llm output
     llm_output = await send_message(session, user_id, llm_input)
 
@@ -202,7 +197,7 @@ async def get_resume(
                 "reason": "resume_not_found",
             },
         )
-        raise LookupError(f"No resume found for id {resume_id}")
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
     logger.info(
         "resume_retrieved", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
     )
@@ -223,7 +218,7 @@ async def update_resume(
                 "reason": "resume_not_found",
             },
         )
-        raise LookupError(f"No resume found for id {resume_id}")
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
     resume.resume_data = data.model_dump(by_alias=True)
     await session.commit()
     await session.refresh(resume)
@@ -247,7 +242,7 @@ async def delete_resume(
                 "reason": "resume_not_found",
             },
         )
-        raise LookupError(f"No resume found for id {resume_id}")
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
     await session.delete(resume)
     await session.commit()
     logger.info(
@@ -270,7 +265,7 @@ async def duplicate_resume(
                 "reason": "resume_not_found",
             },
         )
-        raise LookupError(f"No resume found for id {resume_id}")
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
     new_resume = Resume(
         user_id=user_id,
         filename=filename,

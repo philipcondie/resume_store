@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from pydantic.alias_generators import to_camel
 
 filename_type = Annotated[
@@ -71,7 +71,7 @@ class LLMInput(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     job_description: str
     user_instructions: str
-    jobs: list[JobEntry]
+    jobs: list[JobEntry] = Field(min_length=1)
 
 
 class LLMOutput(BaseModel):

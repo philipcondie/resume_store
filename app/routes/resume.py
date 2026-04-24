@@ -4,6 +4,11 @@ from fastapi import APIRouter, HTTPException, status
 
 import app.services.resume as resume
 from app.core.dependencies import CurrentUserDep, SessionDep
+from app.core.exceptions import (
+    DuplicateFilenameError,
+    IncompleteResumeInputError,
+    ResourceNotFoundError,
+)
 from app.schemas.base import (
     ResumeData,
     ResumeDuplicateRequest,
@@ -22,12 +27,14 @@ async def generate_resume(
         result = await resume.generate_resume(
             session, current_user.id, request.filename, request.input
         )
-    except resume.DuplicateFilenameError as e:
+    except DuplicateFilenameError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except IncompleteResumeInputError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
+        )
     except RuntimeError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -49,7 +56,7 @@ async def get_resume(
 ) -> ResumeData:
     try:
         result = await resume.get_resume(session, current_user.id, resume_id)
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result
 
@@ -63,7 +70,7 @@ async def update_resume(
 ) -> ResumeData:
     try:
         result = await resume.update_resume(session, current_user.id, resume_id, data)
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result
 
@@ -74,7 +81,7 @@ async def delete_resume(
 ) -> None:
     try:
         await resume.delete_resume(session, current_user.id, resume_id)
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
@@ -89,11 +96,9 @@ async def duplicate_resume(
         result = await resume.duplicate_resume(
             session, current_user.id, resume_id, request.filename
         )
-    except resume.DuplicateFilenameError as e:
+    except DuplicateFilenameError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return result
