@@ -2,20 +2,20 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.dependencies import CurrentUserDep, SessionDep
 from app.core.exceptions import ResourceNotFoundError
-from app.schemas.base import UserPromptUpdate
-from app.services.prompt import get_user_prompt, upsert_user_prompt
+from app.schemas.base import UserLayoutUpdate
+from app.services.layout import get_user_layout, upsert_user_layout
 
-prompt_router = APIRouter(prefix="/prompt")
+layout_router = APIRouter(prefix="/layout")
 
 
-@prompt_router.post("/update")
-async def update_prompt(
+@layout_router.post("/update")
+async def update_layout(
     session: SessionDep,
     current_user: CurrentUserDep,
-    prompt_update: UserPromptUpdate,
-) -> UserPromptUpdate:
+    layout_update: UserLayoutUpdate,
+) -> UserLayoutUpdate:
     try:
-        result = await upsert_user_prompt(session, current_user.id, prompt_update)
+        result = await upsert_user_layout(session, current_user.id, layout_update)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except ResourceNotFoundError as e:
@@ -23,13 +23,13 @@ async def update_prompt(
     return result
 
 
-@prompt_router.get("")
-async def get_prompt(
+@layout_router.get("")
+async def get_layout(
     session: SessionDep,
     current_user: CurrentUserDep,
-) -> UserPromptUpdate:
+) -> UserLayoutUpdate:
     try:
-        result = await get_user_prompt(session, current_user.id)
+        result = await get_user_layout(session, current_user.id)
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result

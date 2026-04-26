@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -85,6 +86,21 @@ class UserPromptUpdate(BaseModel):
     prompt: str
 
 
+class SectionName(StrEnum):
+    summary = "summary"
+    jobs = "jobs"
+    education = "education"
+    projects = "projects"
+    skills = "skills"
+
+
+class SectionConfig(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    name: SectionName
+    enabled: bool
+    ordering: int = Field(ge=0)
+
+
 class ResumeData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     personal_info: PersonalInfo | None
@@ -101,6 +117,12 @@ class ResumeRequest(BaseModel):
     input: LLMInput
 
 
+class ResumeResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    resume_data: ResumeData
+    layout: list[SectionConfig]
+
+
 class ResumeDuplicateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     filename: filename_type
@@ -112,3 +134,8 @@ class ResumeMetadata(BaseModel):
     filename: filename_type
     created_at: datetime
     updated_at: datetime
+
+
+class UserLayoutUpdate(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    layout: list[SectionConfig]

@@ -14,6 +14,8 @@ from app.schemas.base import (
     ResumeDuplicateRequest,
     ResumeMetadata,
     ResumeRequest,
+    ResumeResponse,
+    SectionConfig,
 )
 
 resume_router = APIRouter(prefix="/resume")
@@ -53,7 +55,7 @@ async def get_resumes(
 @resume_router.get("/{resume_id}")
 async def get_resume(
     session: SessionDep, current_user: CurrentUserDep, resume_id: uuid.UUID
-) -> ResumeData:
+) -> ResumeResponse:
     try:
         result = await resume.get_resume(session, current_user.id, resume_id)
     except ResourceNotFoundError as e:
@@ -67,9 +69,25 @@ async def update_resume(
     current_user: CurrentUserDep,
     resume_id: uuid.UUID,
     data: ResumeData,
-) -> ResumeData:
+) -> ResumeResponse:
     try:
         result = await resume.update_resume(session, current_user.id, resume_id, data)
+    except ResourceNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return result
+
+
+@resume_router.put("/{resume_id}/layout")
+async def update_resume_layout(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    resume_id: uuid.UUID,
+    layout: list[SectionConfig],
+) -> ResumeResponse:
+    try:
+        result = await resume.update_resume_layout(
+            session, current_user.id, resume_id, layout
+        )
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result

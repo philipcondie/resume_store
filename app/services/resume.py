@@ -9,12 +9,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.claude import client
+from app.core.defaults import DEFAULT_LAYOUT, DEFAULT_USER_PROMPT
 from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
     ResourceNotFoundError,
 )
-from app.models.base import Resume, UserProfile, UserPrompt
+from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
     EducationEntry,
     JobEntry,
@@ -24,9 +25,10 @@ from app.schemas.base import (
     ProjectEntry,
     ResumeData,
     ResumeMetadata,
+    ResumeResponse,
+    SectionConfig,
     SkillEntry,
 )
-from app.services.prompt import DEFAULT_USER_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +109,12 @@ async def generate_resume(
     profile_query = select(UserProfile).where(UserProfile.user_id == user_id)
     profile = (await session.scalars(profile_query)).one_or_none()
     if not profile or not profile.personal_info:
-        logger.warning("resume_input_incomplete", extra={"user_id": str(user_id)})
-        raise IncompleteResumeInputError(identifier=str(user_id))
+        logger.warning(
+            "resume_input_incomplete",
+            extra={"user_id": str(user_id), "input": "personal_info"},
+        )
+        raise IncompleteResumeInputError(identifier=str(user_id), input="personal_info")
+
     # get llm output
     llm_output = await send_message(session, user_id, llm_input)
 
@@ -121,12 +127,24 @@ async def generate_resume(
         projects=[ProjectEntry.model_validate(p) for p in profile.projects or []],
         skills=[SkillEntry.model_validate(s) for s in profile.skills or []],
     )
+
+    # get layout
+    layout_query = select(UserLayout).where(UserLayout.user_id == user_id)
+    userLayout = (await session.scalars(layout_query)).one_or_none()
+    if not userLayout:
+        logger.warning(
+            "user_layout_missing",
+            extra={"user_id": str(user_id)},
+        )
+    layout = userLayout.layout if userLayout else DEFAULT_LAYOUT
+
     resume = Resume(
         user_id=user_id,
         filename=filename,
         llm_input=llm_input.model_dump(by_alias=True),
         llm_output=llm_output.model_dump(by_alias=True),
         resume_data=resume_data.model_dump(by_alias=True),
+        layout=layout,
     )
 
     session.add(resume)
@@ -183,12 +201,10 @@ async def get_resume_list(
 
 async def get_resume(
     session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
-) -> ResumeData:
-    query = select(Resume.resume_data).where(
-        Resume.user_id == user_id, Resume.id == resume_id
-    )
-    resume_data = (await session.execute(query)).scalar_one_or_none()
-    if not resume_data:
+) -> ResumeResponse:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    resume = (await session.execute(query)).scalar_one_or_none()
+    if not resume:
         logger.warning(
             "resume_get_failed",
             extra={
@@ -201,12 +217,12 @@ async def get_resume(
     logger.info(
         "resume_retrieved", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
     )
-    return ResumeData.model_validate(resume_data)
+    return ResumeResponse(resume_data=resume.resume_data, layout=resume.layout)
 
 
 async def update_resume(
     session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID, data: ResumeData
-) -> ResumeData:
+) -> ResumeResponse:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
     if not resume:
@@ -223,9 +239,40 @@ async def update_resume(
     await session.commit()
     await session.refresh(resume)
     logger.info(
-        "resume_updated", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
+        "resume_data_updated",
+        extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
-    return ResumeData.model_validate(resume.resume_data)
+    return ResumeResponse(resume_data=resume.resume_data, layout=resume.layout)
+
+
+async def update_resume_layout(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    resume_id: uuid.UUID,
+    layout: list[SectionConfig],
+) -> ResumeResponse:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    resume = (await session.scalars(query)).one_or_none()
+    if not resume:
+        logger.warning(
+            "resume_update_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
+    resume.layout = [s.model_dump() for s in layout]
+    await session.commit()
+    await session.refresh(resume)
+    logger.info(
+        "resume_layout_updated",
+        extra={"user_id": str(user_id), "resume_id": str(resume_id)},
+    )
+    return ResumeResponse(
+        resume_data=ResumeData.model_validate(resume.resume_data), layout=resume.layout
+    )
 
 
 async def delete_resume(
@@ -272,6 +319,7 @@ async def duplicate_resume(
         llm_input=source.llm_input,
         llm_output=source.llm_output,
         resume_data=source.resume_data,
+        layout=source.layout,
     )
     session.add(new_resume)
     try:

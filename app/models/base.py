@@ -5,6 +5,8 @@ from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint, Uuid, f
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from uuid_utils import uuid7
 
+from app.core.defaults import DEFAULT_LAYOUT
+
 
 class Base(DeclarativeBase):
     pass
@@ -27,6 +29,18 @@ class UserPrompt(Base):
         Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class UserLayout(Base):
+    __tablename__ = "user_layout"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
+    )
+    layout: Mapped[list] = mapped_column(
+        JSON, default=lambda: [s.model_dump for s in DEFAULT_LAYOUT]
+    )
 
 
 class UserProfile(Base):
@@ -55,6 +69,7 @@ class Resume(Base):
     llm_input: Mapped[dict] = mapped_column(JSON)
     llm_output: Mapped[dict] = mapped_column(JSON)
     resume_data: Mapped[dict] = mapped_column(JSON)
+    layout: Mapped[list] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
