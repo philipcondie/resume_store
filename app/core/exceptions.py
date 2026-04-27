@@ -15,7 +15,5 @@ class ResourceNotFoundError(Exception):
 class IncompleteResumeInputError(Exception):
     """Exception for if required info is missing for resume generation"""
 
-    def __init__(self, identifier):
-        super().__init__(
-            f"Cannot generate resume for {identifier}: missing required input"
-        )
+    def __init__(self, identifier, input):
+        super().__init__(f"Cannot generate resume for {identifier}: missing {input}")

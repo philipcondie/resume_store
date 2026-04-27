@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.core.dependencies import CurrentUserDep, SessionDep
+from app.core.exceptions import ResourceNotFoundError
 from app.schemas.base import UserPromptUpdate
 from app.services.prompt import get_user_prompt, upsert_user_prompt
 
@@ -17,7 +18,7 @@ async def update_prompt(
         result = await upsert_user_prompt(session, current_user.id, prompt_update)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result
 
@@ -29,6 +30,6 @@ async def get_prompt(
 ) -> UserPromptUpdate:
     try:
         result = await get_user_prompt(session, current_user.id)
-    except LookupError as e:
+    except ResourceNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result

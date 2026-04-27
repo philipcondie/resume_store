@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.routes.auth import auth_router
 from app.routes.health import health_router
+from app.routes.layout import layout_router
 from app.routes.profile import profile_router
 from app.routes.prompt import prompt_router
 from app.routes.resume import resume_router
@@ -35,3 +36,4 @@ app.include_router(profile_router)
 app.include_router(prompt_router)
 app.include_router(resume_router)
 app.include_router(health_router)
+app.include_router(layout_router)
