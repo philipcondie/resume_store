@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.dependencies import CurrentUserDep, SessionDep
 from app.core.exceptions import ResourceNotFoundError
-from app.schemas.base import UserLayoutUpdate
+from app.schemas.base import LayoutUpdateRequest, SectionConfig
 from app.services.layout import get_user_layout, upsert_user_layout
 
 layout_router = APIRouter(prefix="/layout")
@@ -12,12 +12,10 @@ layout_router = APIRouter(prefix="/layout")
 async def update_layout(
     session: SessionDep,
     current_user: CurrentUserDep,
-    layout_update: UserLayoutUpdate,
-) -> UserLayoutUpdate:
+    layout_update: LayoutUpdateRequest,
+) -> list[SectionConfig]:
     try:
         result = await upsert_user_layout(session, current_user.id, layout_update)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return result
@@ -27,7 +25,7 @@ async def update_layout(
 async def get_layout(
     session: SessionDep,
     current_user: CurrentUserDep,
-) -> UserLayoutUpdate:
+) -> list[SectionConfig]:
     try:
         result = await get_user_layout(session, current_user.id)
     except ResourceNotFoundError as e:

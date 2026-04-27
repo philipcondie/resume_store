@@ -7,9 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.models.base import User, UserPrompt
+from app.core.defaults import DEFAULT_USER_PROMPT
+from app.models.base import User, UserLayout, UserPrompt
 from app.schemas.base import Token, UserCreate
-from app.services.prompt import DEFAULT_USER_PROMPT
 
 settings = get_settings()
 password_hash = PasswordHash.recommended()
@@ -62,9 +62,12 @@ async def create_user(session: AsyncSession, user: UserCreate) -> Token:
     user_new = User(email=user.email, hashed_password=hashed_password)
     session.add(user_new)
     await session.flush()
+
     session.add(UserPrompt(user_id=user_new.id, prompt=DEFAULT_USER_PROMPT))
+    session.add(UserLayout(user_id=user_new.id))
     await session.commit()
     await session.refresh(user_new)
+
     access_token_expires = timedelta(minutes=settings.jwt_token_expires)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires

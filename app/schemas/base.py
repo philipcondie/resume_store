@@ -136,6 +136,6 @@ class ResumeMetadata(BaseModel):
     updated_at: datetime
 
 
-class UserLayoutUpdate(BaseModel):
+class LayoutUpdateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     layout: list[SectionConfig]

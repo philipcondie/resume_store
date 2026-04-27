@@ -39,7 +39,7 @@ class UserLayout(Base):
         Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
     layout: Mapped[list] = mapped_column(
-        JSON, default=lambda: [s.model_dump for s in DEFAULT_LAYOUT]
+        JSON, default=lambda: [s.model_dump() for s in DEFAULT_LAYOUT]
     )
 
 

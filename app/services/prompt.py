@@ -19,11 +19,11 @@ async def get_user_prompt(
     query = select(UserPrompt).where(UserPrompt.user_id == user_id)
     user_prompt = (await session.scalars(query)).one_or_none()
     if not user_prompt:
-        logger.warning(
+        logger.error(
             "prompt_lookup_failed",
             extra={"user_id": str(user_id), "reason": "prompt_not_found"},
         )
-        raise ResourceNotFoundError(resource="prompt", identifier=user_id)
+        raise ResourceNotFoundError(resource="prompt", identifier=str(user_id))
     return UserPromptUpdate(prompt=user_prompt.prompt)
 
 

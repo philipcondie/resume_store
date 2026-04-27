@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.claude import client
-from app.core.defaults import DEFAULT_LAYOUT, DEFAULT_USER_PROMPT
+from app.core.defaults import DEFAULT_USER_PROMPT
 from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
@@ -19,6 +19,7 @@ from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
     EducationEntry,
     JobEntry,
+    LayoutUpdateRequest,
     LLMInput,
     LLMOutput,
     PersonalInfo,
@@ -26,7 +27,6 @@ from app.schemas.base import (
     ResumeData,
     ResumeMetadata,
     ResumeResponse,
-    SectionConfig,
     SkillEntry,
 )
 
@@ -130,13 +130,11 @@ async def generate_resume(
 
     # get layout
     layout_query = select(UserLayout).where(UserLayout.user_id == user_id)
-    userLayout = (await session.scalars(layout_query)).one_or_none()
-    if not userLayout:
-        logger.warning(
-            "user_layout_missing",
-            extra={"user_id": str(user_id)},
-        )
-    layout = userLayout.layout if userLayout else DEFAULT_LAYOUT
+    user_layout = (await session.scalars(layout_query)).one_or_none()
+    if not user_layout:
+        logger.error("layout_lookup_failed", extra={"user_id": str(user_id)})
+        raise ResourceNotFoundError(resource="layout", identifier=str(user_id))
+    layout = user_layout.layout
 
     resume = Resume(
         user_id=user_id,
@@ -249,7 +247,7 @@ async def update_resume_layout(
     session: AsyncSession,
     user_id: uuid.UUID,
     resume_id: uuid.UUID,
-    layout: list[SectionConfig],
+    update: LayoutUpdateRequest,
 ) -> ResumeResponse:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
@@ -263,16 +261,14 @@ async def update_resume_layout(
             },
         )
         raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
-    resume.layout = [s.model_dump() for s in layout]
+    resume.layout = [s.model_dump() for s in update.layout]
     await session.commit()
     await session.refresh(resume)
     logger.info(
         "resume_layout_updated",
         extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
-    return ResumeResponse(
-        resume_data=ResumeData.model_validate(resume.resume_data), layout=resume.layout
-    )
+    return ResumeResponse(resume_data=resume.resume_data, layout=resume.layout)
 
 
 async def delete_resume(
