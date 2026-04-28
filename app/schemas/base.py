@@ -119,6 +119,7 @@ class ResumeRequest(BaseModel):
 
 class ResumeResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    filename: filename_type
     resume_data: ResumeData
     layout: list[SectionConfig]
 
