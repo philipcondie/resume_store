@@ -17,3 +17,10 @@ class IncompleteResumeInputError(Exception):
 
     def __init__(self, identifier, input):
         super().__init__(f"Cannot generate resume for {identifier}: missing {input}")
+
+
+class ResumeLengthError(Exception):
+    """Exception for when resume is longer than the acceptable length"""
+
+    def __init__(self, length):
+        super().__init__(f"Resume length exceed limit. Length: {length}")

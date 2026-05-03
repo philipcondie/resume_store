@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import Response
 
 import app.services.resume as resume
 from app.core.dependencies import CurrentUserDep, SessionDep
@@ -8,6 +9,7 @@ from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
     ResourceNotFoundError,
+    ResumeLengthError,
 )
 from app.schemas.base import (
     LayoutUpdateRequest,
@@ -120,3 +122,26 @@ async def duplicate_resume(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return result
+
+
+@resume_router.get("/{resume_id}/pdf")
+async def render_resume(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    resume_id: uuid.UUID,
+) -> Response:
+    try:
+        rendered_resume = await resume.render_resume(
+            session, current_user.id, resume_id
+        )
+    except ResourceNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResumeLengthError:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
+
+    disposition = f"attachment; filename={rendered_resume.filename}.pdf"
+    return Response(
+        rendered_resume.pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": disposition},
+    )
