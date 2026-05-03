@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
@@ -122,6 +123,7 @@ class ResumeResponse(BaseModel):
     filename: filename_type
     resume_data: ResumeData
     layout: list[SectionConfig]
+    filename: filename_type
 
 
 class ResumeDuplicateRequest(BaseModel):
@@ -140,3 +142,9 @@ class ResumeMetadata(BaseModel):
 class LayoutUpdateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     layout: list[SectionConfig]
+
+
+@dataclass
+class RenderedResume:
+    filename: str
+    pdf: bytes

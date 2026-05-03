@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from weasyprint import HTML
 
 from app.core.claude import client
 from app.core.defaults import DEFAULT_USER_PROMPT
@@ -14,6 +15,7 @@ from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
     ResourceNotFoundError,
+    ResumeLengthError,
 )
 from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
@@ -24,6 +26,7 @@ from app.schemas.base import (
     LLMOutput,
     PersonalInfo,
     ProjectEntry,
+    RenderedResume,
     ResumeData,
     ResumeMetadata,
     ResumeResponse,
@@ -36,6 +39,7 @@ prompt_template_dir = Path(__file__).parent.parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(prompt_template_dir))
 base_prompt_template = jinja_env.get_template("base_prompt.j2")
 user_message_template = jinja_env.get_template("user_message.j2")
+resume_template = jinja_env.get_template("resume_template.html.j2")
 
 
 async def send_message(
@@ -352,3 +356,45 @@ async def duplicate_resume(
         created_at=new_resume.created_at,
         updated_at=new_resume.updated_at,
     )
+
+
+async def render_resume(
+    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
+) -> RenderedResume:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    source = (await session.scalars(query)).one_or_none()
+    if not source:
+        logger.warning(
+            "render_resume_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
+
+    html_string = resume_template.render(**source.resume_data, sections=source.layout)
+    document = HTML(string=html_string, base_url=str(prompt_template_dir)).render()
+
+    if len(document.pages) > 1:
+        logger.info(
+            "render_resume_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_length_exceeded",
+                "length": len(document.pages),
+            },
+        )
+        raise ResumeLengthError(len(document.pages))
+
+    logger.info(
+        "resume_pdf_downloaded",
+        extra={
+            "user_id": str(user_id),
+            "resume_id": str(source.id),
+            "file_name": source.filename,
+        },
+    )
+    return RenderedResume(filename=source.filename, pdf=document.write_pdf())
