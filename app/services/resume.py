@@ -220,7 +220,7 @@ async def get_resume(
         "resume_retrieved", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
     )
     return ResumeResponse(
-        resume_data=resume.resume_data, layout=resume.layout, filename=resume.filename
+        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
     )
 
 
@@ -246,7 +246,9 @@ async def update_resume(
         "resume_data_updated",
         extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
-    return ResumeResponse(resume_data=resume.resume_data, layout=resume.layout)
+    return ResumeResponse(
+        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
+    )
 
 
 async def update_resume_layout(
@@ -274,7 +276,9 @@ async def update_resume_layout(
         "resume_layout_updated",
         extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
-    return ResumeResponse(resume_data=resume.resume_data, layout=resume.layout)
+    return ResumeResponse(
+        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
+    )
 
 
 async def delete_resume(
