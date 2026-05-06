@@ -33,12 +33,84 @@
             src: url('fonts/OpenSans-ExtraBold.ttf') format('truetype');
         }
 
+        /* inter-regular - latin */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 400;
+            src: url('fonts/inter-v20-latin-regular.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* inter-600 - latin */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 600;
+            src: url('fonts/inter-v20-latin-600.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* inter-700 - latin */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 700;
+            src: url('fonts/inter-v20-latin-700.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* inter-800 - latin */
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 800;
+            src: url('fonts/inter-v20-latin-800.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* source-serif-4-regular - latin */
+        @font-face {
+            font-family: 'Source Serif 4';
+            font-style: normal;
+            font-weight: 400;
+            src: url('fonts/source-serif-4-v14-latin-regular.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* source-serif-4-600 - latin */
+        @font-face {
+            font-family: 'Source Serif 4';
+            font-style: normal;
+            font-weight: 600;
+            src: url('fonts/source-serif-4-v14-latin-600.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* source-serif-4-700 - latin */
+        @font-face {
+            font-family: 'Source Serif 4';
+            font-style: normal;
+            font-weight: 700;
+            src: url('fonts/source-serif-4-v14-latin-700.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
+        /* source-serif-4-800 - latin */
+        @font-face {
+            font-family: 'Source Serif 4';
+            font-style: normal;
+            font-weight: 800;
+            src: url('fonts/source-serif-4-v14-latin-800.ttf') format('truetype');
+            /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+        }
+
         :root {
-            --color-text: #323232;
-            --color-text-name: #1A5C71;
-            --color-accent: #2a7f9e;
-            --color-bg: #ffffff;
-            --font-main: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
+            --color-text: #000000;
+            --color-text-name: {{ color_text_name }};
+            --color-accent: {{ color_accent }};
+            --color-bg: #FFFFFF;
+            --font-main: {% for f in font_main %}"{{ f }}"{% if not loop.last %}, {% endif %}{% endfor %};
         }
 
         *,

@@ -102,6 +102,13 @@ class SectionConfig(BaseModel):
     ordering: int = Field(ge=0)
 
 
+class ResumeStyling(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    color_text_name: str
+    color_accent: str
+    font_main: list[str]
+
+
 class ResumeData(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     personal_info: PersonalInfo | None

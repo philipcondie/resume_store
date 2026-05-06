@@ -5,7 +5,7 @@ from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint, Uuid, f
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from uuid_utils import uuid7
 
-from app.core.defaults import DEFAULT_LAYOUT
+from app.core.defaults import DEFAULT_LAYOUT, DEFAULT_STYLING
 
 
 class Base(DeclarativeBase):
@@ -40,6 +40,9 @@ class UserLayout(Base):
     )
     layout: Mapped[list] = mapped_column(
         JSON, default=lambda: [s.model_dump() for s in DEFAULT_LAYOUT]
+    )
+    styling: Mapped[dict] = mapped_column(
+        JSON, default=lambda: DEFAULT_STYLING.model_dump()
     )
 
 
