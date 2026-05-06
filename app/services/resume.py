@@ -374,7 +374,16 @@ async def render_resume(
         )
         raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
 
-    html_string = resume_template.render(**source.resume_data, sections=source.layout)
+    # get layout
+    layout_query = select(UserLayout).where(UserLayout.user_id == user_id)
+    user_layout = (await session.scalars(layout_query)).one_or_none()
+    if not user_layout:
+        logger.error("styling_lookup_failed", extra={"user_id": str(user_id)})
+        raise ResourceNotFoundError(resource="styling", identifier=str(user_id))
+
+    html_string = resume_template.render(
+        **source.resume_data, **(user_layout.styling), sections=source.layout
+    )
     document = HTML(string=html_string, base_url=str(prompt_template_dir)).render()
 
     if len(document.pages) > 1:
