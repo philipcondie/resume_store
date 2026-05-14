@@ -130,6 +130,7 @@ class ResumeResponse(BaseModel):
     filename: filename_type
     resume_data: ResumeData
     layout: list[SectionConfig]
+    job_description: str
     filename: filename_type
 
 
