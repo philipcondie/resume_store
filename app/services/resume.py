@@ -219,8 +219,13 @@ async def get_resume(
     logger.info(
         "resume_retrieved", extra={"user_id": str(user_id), "resume_id": str(resume_id)}
     )
+
+    job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
-        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
+        filename=resume.filename,
+        resume_data=resume.resume_data,
+        layout=resume.layout,
+        job_description=job_desc,
     )
 
 
@@ -246,8 +251,12 @@ async def update_resume(
         "resume_data_updated",
         extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
+    job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
-        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
+        filename=resume.filename,
+        resume_data=resume.resume_data,
+        layout=resume.layout,
+        job_description=job_desc,
     )
 
 
@@ -276,8 +285,12 @@ async def update_resume_layout(
         "resume_layout_updated",
         extra={"user_id": str(user_id), "resume_id": str(resume_id)},
     )
+    job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
-        filename=resume.filename, resume_data=resume.resume_data, layout=resume.layout
+        filename=resume.filename,
+        resume_data=resume.resume_data,
+        layout=resume.layout,
+        job_description=job_desc,
     )
 
 
