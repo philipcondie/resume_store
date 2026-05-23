@@ -38,8 +38,8 @@ class UserLayout(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
-    layout: Mapped[list] = mapped_column(
-        JSON, default=lambda: [s.model_dump() for s in DEFAULT_LAYOUT]
+    layout: Mapped[dict] = mapped_column(
+        JSON, default=lambda: DEFAULT_LAYOUT.model_dump()
     )
     styling: Mapped[dict] = mapped_column(
         JSON, default=lambda: DEFAULT_STYLING.model_dump()
@@ -72,7 +72,7 @@ class Resume(Base):
     llm_input: Mapped[dict] = mapped_column(JSON)
     llm_output: Mapped[dict] = mapped_column(JSON)
     resume_data: Mapped[dict] = mapped_column(JSON)
-    layout: Mapped[list] = mapped_column(JSON)
+    layout: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
