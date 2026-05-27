@@ -23,4 +23,11 @@ class ResumeLengthError(Exception):
     """Exception for when resume is longer than the acceptable length"""
 
     def __init__(self, length):
-        super().__init__(f"Resume length exceed limit. Length: {length}")
+        super().__init__(f"Resume length exceeds limit. Pages: {length}")
+
+
+class PDFGenerationError(Exception):
+    """Exception for when resume is longer than the acceptable length"""
+
+    def __init__(self, filename: str):
+        super().__init__(f"Resume pdf could not be generated. Filename: {filename}")

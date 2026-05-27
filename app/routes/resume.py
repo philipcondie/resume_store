@@ -136,8 +136,10 @@ async def render_resume(
         )
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ResumeLengthError:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
+    except ResumeLengthError as e:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(e)
+        )
 
     disposition = f"attachment; filename={rendered_resume.filename}.pdf"
     return Response(

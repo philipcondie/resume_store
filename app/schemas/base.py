@@ -95,11 +95,42 @@ class SectionName(StrEnum):
     skills = "skills"
 
 
+class Panel(StrEnum):
+    main = "main"
+    left = "left"
+    right = "right"
+    sidebar = "sidebar"
+
+
+class TemplateName(StrEnum):
+    classic = "classic"
+    sidebar = "sidebar"
+    multipanel = "multipanel"
+
+
 class SectionConfig(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     name: SectionName
     enabled: bool
     ordering: int = Field(ge=0)
+    panel: Panel
+
+
+class TemplateConfig(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    sections: list[SectionConfig]
+
+
+class Templates(BaseModel):
+    classic: TemplateConfig
+    sidebar: TemplateConfig
+    multipanel: TemplateConfig
+
+
+class LayoutConfig(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    selected_template: TemplateName
+    templates: Templates
 
 
 class ResumeStyling(BaseModel):
@@ -129,7 +160,7 @@ class ResumeResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     filename: filename_type
     resume_data: ResumeData
-    layout: list[SectionConfig]
+    layout: LayoutConfig
     job_description: str
     filename: filename_type
 
@@ -149,7 +180,7 @@ class ResumeMetadata(BaseModel):
 
 class LayoutUpdateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    layout: list[SectionConfig]
+    layout: LayoutConfig
 
 
 @dataclass

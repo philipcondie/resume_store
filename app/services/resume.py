@@ -7,13 +7,14 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import HTML
+from weasyprint import CSS, HTML
 
 from app.core.claude import client
 from app.core.defaults import DEFAULT_USER_PROMPT
 from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
+    PDFGenerationError,
     ResourceNotFoundError,
     ResumeLengthError,
 )
@@ -21,25 +22,34 @@ from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
     EducationEntry,
     JobEntry,
+    LayoutConfig,
     LayoutUpdateRequest,
     LLMInput,
     LLMOutput,
+    Panel,
     PersonalInfo,
     ProjectEntry,
     RenderedResume,
     ResumeData,
     ResumeMetadata,
     ResumeResponse,
+    SectionConfig,
+    SectionName,
     SkillEntry,
+    TemplateName,
 )
 
 logger = logging.getLogger(__name__)
 
 prompt_template_dir = Path(__file__).parent.parent / "templates"
-jinja_env = Environment(loader=FileSystemLoader(prompt_template_dir))
-base_prompt_template = jinja_env.get_template("base_prompt.j2")
-user_message_template = jinja_env.get_template("user_message.j2")
-resume_template = jinja_env.get_template("resume_template.html.j2")
+resume_template_dir = Path(__file__).parent.parent / "templates/resume_templates"
+prompt_env = Environment(loader=FileSystemLoader(prompt_template_dir))
+resume_env = Environment(loader=FileSystemLoader(resume_template_dir))
+
+base_prompt_template = prompt_env.get_template("base_prompt.j2")
+user_message_template = prompt_env.get_template("user_message.j2")
+
+RESUME_CSS = CSS(filename=str(resume_template_dir / "resume.css"))
 
 
 async def send_message(
@@ -223,8 +233,8 @@ async def get_resume(
     job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
         filename=resume.filename,
-        resume_data=resume.resume_data,
-        layout=resume.layout,
+        resume_data=ResumeData.model_validate(resume.resume_data),
+        layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
     )
 
@@ -254,8 +264,8 @@ async def update_resume(
     job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
         filename=resume.filename,
-        resume_data=resume.resume_data,
-        layout=resume.layout,
+        resume_data=ResumeData.model_validate(resume.resume_data),
+        layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
     )
 
@@ -278,7 +288,7 @@ async def update_resume_layout(
             },
         )
         raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
-    resume.layout = [s.model_dump() for s in update.layout]
+    resume.layout = update.layout.model_dump()
     await session.commit()
     await session.refresh(resume)
     logger.info(
@@ -288,8 +298,8 @@ async def update_resume_layout(
     job_desc = LLMInput.model_validate(resume.llm_input).job_description
     return ResumeResponse(
         filename=resume.filename,
-        resume_data=resume.resume_data,
-        layout=resume.layout,
+        resume_data=ResumeData.model_validate(resume.resume_data),
+        layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
     )
 
@@ -371,6 +381,45 @@ async def duplicate_resume(
     )
 
 
+TEMPLATE_REGISTRY: dict[TemplateName, tuple[str, list[Panel]]] = {
+    TemplateName.classic: ("classic_layout.html.j2", [Panel.main]),
+    TemplateName.sidebar: ("sidebar_layout.html.j2", [Panel.main, Panel.sidebar]),
+    TemplateName.multipanel: (
+        "multipanel_layout.html.j2",
+        [Panel.main, Panel.left, Panel.right],
+    ),
+}
+
+
+def verify_section(resume_data: ResumeData, section_name: SectionName) -> bool:
+    section_data = getattr(resume_data, section_name, None)
+    if section_data and (section_name != SectionName.summary or section_data.strip()):
+        return True
+    return False
+
+
+def create_html_string(source_resume: Resume, user_layout: UserLayout) -> str:
+    resume_layout = LayoutConfig.model_validate(source_resume.layout)
+    resume_data = ResumeData.model_validate(source_resume.resume_data)
+    sections: list[SectionConfig] = getattr(
+        resume_layout.templates, resume_layout.selected_template.value
+    ).sections
+    sections.sort(key=lambda x: x.ordering)
+
+    def panel(p: Panel) -> list[SectionConfig]:
+        return [
+            s
+            for s in sections
+            if s.enabled and s.panel == p and verify_section(resume_data, s.name)
+        ]
+
+    filename, panels = TEMPLATE_REGISTRY[resume_layout.selected_template]
+    panels_data = {p.value + "_sections": panel(p) for p in panels}
+    return resume_env.get_template(filename).render(
+        **panels_data, **(user_layout.styling), resume_data=resume_data
+    )
+
+
 async def render_resume(
     session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
 ) -> RenderedResume:
@@ -394,10 +443,10 @@ async def render_resume(
         logger.error("styling_lookup_failed", extra={"user_id": str(user_id)})
         raise ResourceNotFoundError(resource="styling", identifier=str(user_id))
 
-    html_string = resume_template.render(
-        **source.resume_data, **(user_layout.styling), sections=source.layout
+    html_string = create_html_string(source_resume=source, user_layout=user_layout)
+    document = HTML(string=html_string, base_url=str(resume_template_dir)).render(
+        stylesheets=[RESUME_CSS]
     )
-    document = HTML(string=html_string, base_url=str(prompt_template_dir)).render()
 
     if len(document.pages) > 1:
         logger.info(
@@ -411,6 +460,18 @@ async def render_resume(
         )
         raise ResumeLengthError(len(document.pages))
 
+    resume_bytes = document.write_pdf()
+    if not resume_bytes:
+        logger.error(
+            "pdf_create_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise PDFGenerationError(source.filename)
+
     logger.info(
         "resume_pdf_downloaded",
         extra={
@@ -419,4 +480,4 @@ async def render_resume(
             "file_name": source.filename,
         },
     )
-    return RenderedResume(filename=source.filename, pdf=document.write_pdf())
+    return RenderedResume(filename=source.filename, pdf=resume_bytes)

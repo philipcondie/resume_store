@@ -1,0 +1,303 @@
+@font-face {
+    font-family: 'Open Sans';
+    font-weight: 400;
+    font-style: normal;
+    src: url('fonts/OpenSans-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-weight: 600;
+    font-style: normal;
+    src: url('fonts/OpenSans-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-weight: 700;
+    font-style: normal;
+    src: url('fonts/OpenSans-Bold.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-weight: 800;
+    font-style: normal;
+    src: url('fonts/OpenSans-ExtraBold.ttf') format('truetype');
+}
+
+/* inter-regular - latin */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/inter-v20-latin-regular.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* inter-600 - latin */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 600;
+    src: url('fonts/inter-v20-latin-600.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* inter-700 - latin */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    src: url('fonts/inter-v20-latin-700.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* inter-800 - latin */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 800;
+    src: url('fonts/inter-v20-latin-800.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* source-serif-4-regular - latin */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/source-serif-4-v14-latin-regular.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* source-serif-4-600 - latin */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 600;
+    src: url('fonts/source-serif-4-v14-latin-600.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* source-serif-4-700 - latin */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 700;
+    src: url('fonts/source-serif-4-v14-latin-700.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+/* source-serif-4-800 - latin */
+@font-face {
+    font-family: 'Source Serif 4';
+    font-style: normal;
+    font-weight: 800;
+    src: url('fonts/source-serif-4-v14-latin-800.ttf') format('truetype');
+    /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+}
+
+.page,
+.page *,
+.page *::before,
+.page *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ── Page ── */
+@page {
+    size: letter;
+    margin: 0.55in 0.5in 0.5in 0.5in;
+}
+
+.page {
+    background: var(--color-bg);
+    font-family: var(--font-main);
+    color: var(--color-text);
+    line-height: 1.45;
+}
+
+/* ── Header ── */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2.5px solid var(--color-accent);
+    padding-bottom: 0.08in;
+    margin-bottom: 0.18in;
+}
+
+.header h1 {
+    font-family: var(--font-main);
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-text-name);
+    line-height: 1.1;
+}
+
+.contact-info {
+    text-align: right;
+    font-size: 0.72rem;
+    color: var(--color-text-name);
+}
+
+.contact-info a {
+    color: var(--color-text-name);
+    text-decoration: none;
+}
+
+/* ── Section ── */
+.section {
+    margin-bottom: 0.12in;
+}
+
+.section-title {
+    font-family: var(--font-main);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin-bottom: 0.06in;
+}
+
+/* ── Summary ── */
+.summary p {
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: var(--color-text);
+}
+
+/* ── Skills ── */
+.skills-list {
+    font-size: 0.72rem;
+    line-height: 1.65;
+}
+
+.skills-list .skill-line {
+    margin-bottom: 0.01in;
+}
+
+.skill-category {
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.skill-values {
+    color: var(--color-text);
+}
+
+/* ── Section Items (Jobs, Education, Projects) ── */
+.section-item {
+    margin-bottom: 0.1in;
+}
+
+.section-item:last-child {
+    margin-bottom: 0;
+}
+
+.section-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    margin-bottom: 0.01in;
+}
+
+.section-item-primary {
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.section-item-secondary {
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.section-item-bullets {
+    list-style: disc;
+    margin-top: 0.03in;
+    padding-left: 1em;
+}
+
+.section-item-bullets li {
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: var(--color-text);
+    margin-bottom: 0.05in;
+    list-style-position: outside;
+}
+
+.section-item-bullets li:last-child {
+    margin-bottom: 0;
+}
+
+/* ── Classic layout ── */
+/* No grid — sections stack naturally. */
+
+/* ── Sidebar layout ── */
+.layout-sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.25in;
+}
+
+.layout-sidebar > .header {
+    flex-basis: 100%;
+}
+
+.layout-sidebar .sidebar-panel {
+    flex: 1;
+    min-width: 0;
+    padding-right: 0.2in;
+}
+
+.layout-sidebar .main-panel {
+    flex: 2;
+    min-width: 0;
+    padding-left: 0.2in;
+    border-left: 1px solid var(--color-accent);
+}
+
+/* ── Multipanel layout ── */
+.layout-multipanel {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.25in;
+}
+
+.layout-multipanel > .header,
+.layout-multipanel > .main-panel {
+    flex-basis: 100%;
+}
+
+.layout-multipanel > .main-panel {
+    border-bottom: 1px solid var(--color-accent);
+    padding-bottom: 0.15in;
+    margin-bottom: 0.15in;
+}
+
+.layout-multipanel .left-panel {
+    flex: 1;
+    min-width: 0;
+    padding-right: 0.2in;
+}
+
+.layout-multipanel .right-panel {
+    flex: 1;
+    min-width: 0;
+    padding-left: 0.2in;
+    border-left: 1px solid var(--color-accent);
+}
+
+.layout-multipanel .main-panel .section + .section {
+    border-top: 1px solid var(--color-accent);
+    padding-top: 0.1in;
+    margin-top: 0.1in;
+}
