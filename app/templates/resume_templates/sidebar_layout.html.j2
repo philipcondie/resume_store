@@ -1,0 +1,46 @@
+{% import "macros.j2" as m %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ resume_data.personal_info.name }} — Resume</title>
+    <style>
+        :root {
+            --color-text: #000000;
+            --color-text-name: {{ color_text_name }};
+            --color-accent: {{ color_accent }};
+            --color-bg: #FFFFFF;
+            --font-main: {% for f in font_main %}"{{ f }}"{% if not loop.last %}, {% endif %}{% endfor %};
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page layout-sidebar">
+        {# ── Header / Personal Info (always rendered first) ── #}
+        <div class="header">
+            <h1>{{ resume_data.personal_info.name }}</h1>
+            <div class="contact-info">
+                {{ resume_data.personal_info.email }} &nbsp;|&nbsp; {{ resume_data.personal_info.phonenumber }}
+                {% for extra in resume_data.personal_info.extras or [] %}
+                &nbsp;|&nbsp; {{ extra }}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="sidebar-panel">
+            {% for section in sidebar_sections %}
+                {{ m.render(section, resume_data) }}
+            {% endfor %}
+        </div>
+        <div class="main-panel">
+            {% for section in main_sections %}
+                {{ m.render(section, resume_data) }}
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+
+</html>

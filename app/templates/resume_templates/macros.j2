@@ -1,0 +1,110 @@
+{% macro summary(summary) %}
+    {% if summary and summary.strip() %}
+    <section class="section summary">
+        <h2 class="section-title">Summary</h2>
+        <p>{{ summary }}</p>
+    </section>
+    {% endif %}
+{% endmacro %}
+
+{% macro jobs(jobs) %}
+    {% if jobs and jobs|length > 0 %}
+    <section class="section">
+        <h2 class="section-title">Work Experience</h2>
+        {% for job in jobs %}
+        <div class="section-item">
+            <div class="section-item-header">
+                <span class="section-item-primary">
+                    {{ job.role }} — {{ job.company }}{% if job.location %} — {{ job.location }}{% endif %}
+                </span>
+                <span class="section-item-secondary">
+                    {{ job.start_date }} - {{ job.end_date }}
+                </span>
+            </div>
+            {% if job.bullets and job.bullets|length > 0 %}
+            <ul class="section-item-bullets">
+                {% for bullet in job.bullets %}
+                <li>{{ bullet }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+{% endmacro %}
+
+{% macro education(education) %}
+    {% if education and education|length > 0 %}
+        <section class="section">
+            <h2 class="section-title">Education</h2>
+            {% for entry in education %}
+            <div class="section-item">
+                <div class="section-item-header">
+                    <span class="section-item-primary">{{ entry.school }}</span>
+                    <span class="section-item-secondary">{{ entry.degree }}</span>
+                </div>
+                {% if entry.bullets and entry.bullets|length > 0 %}
+                <ul class="section-item-bullets">
+                    {% for bullet in entry.bullets %}
+                    <li>{{ bullet }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+    {% endif %}
+{% endmacro %}
+
+{% macro projects(projects) %}
+    {% if projects and projects|length > 0 %}
+        <section class="section">
+            <h2 class="section-title">Projects</h2>
+            {% for project in projects %}
+            <div class="section-item">
+                <div class="section-item-header">
+                    <span class="section-item-primary">{{ project.title }}</span>
+                </div>
+                {% if project.bullets and project.bullets|length > 0 %}
+                <ul class="section-item-bullets">
+                    {% for bullet in project.bullets %}
+                    <li>{{ bullet }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+    {% endif %}
+{% endmacro %}
+    
+{% macro skills(skills) %}
+    {% if skills and skills|length > 0 %}
+        <section class="section">
+            <h2 class="section-title">Skills</h2>
+            <div class="skills-list">
+                {% for skill in skills %}
+                <div class="skill-line">
+                    <span class="skill-category">{{ skill.title }}: </span>
+                    <span class="skill-values">{{ skill.text }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+{% endmacro %}
+
+{% macro render(section, resume_data) %}
+    {% if section.name == "summary" %}
+        {{ summary(resume_data.summary) }}
+    {% elif section.name == "jobs" %}
+        {{ jobs(resume_data.jobs) }}
+    {% elif section.name == "education" %}
+        {{ education(resume_data.education) }}
+    {% elif section.name == "projects" %}
+        {{ projects(resume_data.projects) }}
+    {% elif section.name == "skills" %}
+        {{ skills(resume_data.skills) }}
+    {% endif %}
+{% endmacro %}

@@ -18,7 +18,7 @@ async def get_user_layout(session: AsyncSession, user_id: uuid.UUID) -> LayoutCo
     if not user_layout:
         logger.error("layout_lookup_failed", extra={"user_id": str(user_id)})
         raise ResourceNotFoundError(resource="layout", identifier=str(user_id))
-    return LayoutConfig.model_validate(user_layout)
+    return LayoutConfig.model_validate(user_layout.layout)
 
 
 async def upsert_user_layout(
