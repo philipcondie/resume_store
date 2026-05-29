@@ -156,6 +156,16 @@ class ResumeRequest(BaseModel):
     input: LLMInput
 
 
+class ResumeUpdateRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    filename: filename_type
+    resume_data: ResumeData
+    layout: LayoutConfig
+    job_description: str
+    filename: filename_type
+    styling: ResumeStyling
+
+
 class ResumeResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     filename: filename_type
@@ -163,6 +173,7 @@ class ResumeResponse(BaseModel):
     layout: LayoutConfig
     job_description: str
     filename: filename_type
+    styling: ResumeStyling
 
 
 class ResumeDuplicateRequest(BaseModel):
