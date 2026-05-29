@@ -13,11 +13,11 @@ from app.core.exceptions import (
 )
 from app.schemas.base import (
     LayoutUpdateRequest,
-    ResumeData,
     ResumeDuplicateRequest,
     ResumeMetadata,
     ResumeRequest,
     ResumeResponse,
+    ResumeUpdateRequest,
 )
 
 resume_router = APIRouter(prefix="/resume")
@@ -70,10 +70,12 @@ async def update_resume(
     session: SessionDep,
     current_user: CurrentUserDep,
     resume_id: uuid.UUID,
-    data: ResumeData,
+    request: ResumeUpdateRequest,
 ) -> ResumeResponse:
     try:
-        result = await resume.update_resume(session, current_user.id, resume_id, data)
+        result = await resume.update_resume(
+            session, current_user.id, resume_id, request
+        )
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return result

@@ -33,6 +33,8 @@ from app.schemas.base import (
     ResumeData,
     ResumeMetadata,
     ResumeResponse,
+    ResumeStyling,
+    ResumeUpdateRequest,
     SectionConfig,
     SectionName,
     SkillEntry,
@@ -148,7 +150,6 @@ async def generate_resume(
     if not user_layout:
         logger.error("layout_lookup_failed", extra={"user_id": str(user_id)})
         raise ResourceNotFoundError(resource="layout", identifier=str(user_id))
-    layout = user_layout.layout
 
     resume = Resume(
         user_id=user_id,
@@ -156,7 +157,8 @@ async def generate_resume(
         llm_input=llm_input.model_dump(by_alias=True),
         llm_output=llm_output.model_dump(by_alias=True),
         resume_data=resume_data.model_dump(by_alias=True),
-        layout=layout,
+        layout=user_layout.layout,
+        styling=user_layout.styling,
     )
 
     session.add(resume)
@@ -236,11 +238,15 @@ async def get_resume(
         resume_data=ResumeData.model_validate(resume.resume_data),
         layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
+        styling=ResumeStyling.model_validate(resume.styling),
     )
 
 
 async def update_resume(
-    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID, data: ResumeData
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    resume_id: uuid.UUID,
+    data: ResumeUpdateRequest,
 ) -> ResumeResponse:
     query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
     resume = (await session.scalars(query)).one_or_none()
@@ -254,7 +260,10 @@ async def update_resume(
             },
         )
         raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
-    resume.resume_data = data.model_dump(by_alias=True)
+
+    for key, value in data.model_dump().items():
+        setattr(resume, key, value)
+
     await session.commit()
     await session.refresh(resume)
     logger.info(
@@ -267,6 +276,7 @@ async def update_resume(
         resume_data=ResumeData.model_validate(resume.resume_data),
         layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
+        styling=ResumeStyling.model_validate(resume.styling),
     )
 
 
@@ -301,6 +311,7 @@ async def update_resume_layout(
         resume_data=ResumeData.model_validate(resume.resume_data),
         layout=LayoutConfig.model_validate(resume.layout),
         job_description=job_desc,
+        styling=ResumeStyling.model_validate(resume.styling),
     )
 
 
@@ -398,9 +409,10 @@ def verify_section(resume_data: ResumeData, section_name: SectionName) -> bool:
     return False
 
 
-def create_html_string(source_resume: Resume, user_layout: UserLayout) -> str:
+def create_html_string(source_resume: Resume) -> str:
     resume_layout = LayoutConfig.model_validate(source_resume.layout)
     resume_data = ResumeData.model_validate(source_resume.resume_data)
+    resume_styling = ResumeStyling.model_validate(source_resume.styling)
     sections: list[SectionConfig] = getattr(
         resume_layout.templates, resume_layout.selected_template.value
     ).sections
@@ -416,7 +428,7 @@ def create_html_string(source_resume: Resume, user_layout: UserLayout) -> str:
     filename, panels = TEMPLATE_REGISTRY[resume_layout.selected_template]
     panels_data = {p.value + "_sections": panel(p) for p in panels}
     return resume_env.get_template(filename).render(
-        **panels_data, **(user_layout.styling), resume_data=resume_data
+        **panels_data, **(resume_styling).model_dump(), resume_data=resume_data
     )
 
 
@@ -436,14 +448,7 @@ async def render_resume(
         )
         raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
 
-    # get layout
-    layout_query = select(UserLayout).where(UserLayout.user_id == user_id)
-    user_layout = (await session.scalars(layout_query)).one_or_none()
-    if not user_layout:
-        logger.error("styling_lookup_failed", extra={"user_id": str(user_id)})
-        raise ResourceNotFoundError(resource="styling", identifier=str(user_id))
-
-    html_string = create_html_string(source_resume=source, user_layout=user_layout)
+    html_string = create_html_string(source_resume=source)
     document = HTML(string=html_string, base_url=str(resume_template_dir)).render(
         stylesheets=[RESUME_CSS]
     )

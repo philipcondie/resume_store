@@ -73,6 +73,7 @@ class Resume(Base):
     llm_output: Mapped[dict] = mapped_column(JSON)
     resume_data: Mapped[dict] = mapped_column(JSON)
     layout: Mapped[dict] = mapped_column(JSON)
+    styling: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
