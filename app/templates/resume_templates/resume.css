@@ -98,6 +98,12 @@
     /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
 }
 
+/* Pin the rem basis so it can't drift from the frontend preview render.
+   Must match resume-tailor src/pages/Preview.css. */
+html {
+    font-size: 16px;
+}
+
 .page,
 .page *,
 .page *::before,
