@@ -3,6 +3,11 @@ services:
     image: postgres:18
     env_file: .env.prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -15,6 +20,11 @@ services:
     build: .
     env_file: .env.prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       db:
         condition: service_healthy
@@ -24,6 +34,11 @@ services:
   caddy:
     image: caddy:2.11.2
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "80:80"
       - "443:443"
