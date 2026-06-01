@@ -27,6 +27,7 @@ app.add_middleware(
     allow_origins=origins,
     allow_methods=methods,
     allow_headers=["*"],
+    expose_headers=["x-resume-page-count", "content-disposition"],
 )
 
 app.add_middleware(CorrelationIdMiddleware)

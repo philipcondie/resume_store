@@ -198,3 +198,4 @@ class LayoutUpdateRequest(BaseModel):
 class RenderedResume:
     filename: str
     pdf: bytes
+    page_count: int

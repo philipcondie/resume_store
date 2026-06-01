@@ -147,5 +147,8 @@ async def render_resume(
     return Response(
         rendered_resume.pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": disposition},
+        headers={
+            "Content-Disposition": disposition,
+            "X-Resume-Page-Count": str(rendered_resume.page_count),
+        },
     )

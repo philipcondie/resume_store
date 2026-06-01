@@ -16,7 +16,6 @@ from app.core.exceptions import (
     IncompleteResumeInputError,
     PDFGenerationError,
     ResourceNotFoundError,
-    ResumeLengthError,
 )
 from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
@@ -455,15 +454,13 @@ async def render_resume(
 
     if len(document.pages) > 1:
         logger.info(
-            "render_resume_failed",
+            "pdf_length_exceeds_1",
             extra={
                 "user_id": str(user_id),
                 "resume_id": str(resume_id),
-                "reason": "resume_length_exceeded",
                 "length": len(document.pages),
             },
         )
-        raise ResumeLengthError(len(document.pages))
 
     resume_bytes = document.write_pdf()
     if not resume_bytes:
@@ -485,4 +482,6 @@ async def render_resume(
             "file_name": source.filename,
         },
     )
-    return RenderedResume(filename=source.filename, pdf=resume_bytes)
+    return RenderedResume(
+        filename=source.filename, pdf=resume_bytes, page_count=len(document.pages)
+    )
