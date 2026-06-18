@@ -1,9 +1,12 @@
+from contextlib import asynccontextmanager
+
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.render import PDFManager
 from app.routes.auth import auth_router
 from app.routes.health import health_router
 from app.routes.layout import layout_router
@@ -20,7 +23,17 @@ methods = (
 log_level = "DEBUG" if settings.environment.lower() == "dev" else "INFO"
 configure_logging(level=log_level)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    manager = PDFManager(settings.max_concurrency_pdf)
+    await manager.start()
+    app.state.pdf_manager = manager
+    yield
+    await app.state.pdf_manager.stop()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

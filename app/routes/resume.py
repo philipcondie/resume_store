@@ -4,10 +4,15 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import Response
 
 import app.services.resume as resume
-from app.core.dependencies import CurrentUserDep, SessionDep
+from app.core.dependencies import CurrentUserDep, PDFManagerDep, SessionDep
 from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
+    PDFGenerationError,
+    PDFReaderError,
+    PDFRendererConfigurationError,
+    PDFRenderTimeoutError,
+    RenderCapacityError,
     ResourceNotFoundError,
     ResumeLengthError,
 )
@@ -138,6 +143,57 @@ async def render_resume(
         )
     except ResourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ResumeLengthError as e:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(e)
+        )
+
+    disposition = f"attachment; filename={rendered_resume.filename}.pdf"
+    return Response(
+        rendered_resume.pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": disposition,
+            "X-Resume-Page-Count": str(rendered_resume.page_count),
+        },
+    )
+
+
+@resume_router.get("/{resume_id}/pdf/playwright")
+async def render_resume_playwright(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    pdf_manager: PDFManagerDep,
+    resume_id: uuid.UUID,
+) -> Response:
+    try:
+        rendered_resume = await resume.render_resume_playwright(
+            session, pdf_manager, current_user.id, resume_id
+        )
+    except PDFRendererConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    except ResourceNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PDFGenerationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    except PDFReaderError as e:
+        HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except RenderCapacityError as e:
+        HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+            headers={"Retry-After": "5"},
+        )
+    except PDFRenderTimeoutError as e:
+        HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+            headers={"Retry-After": "5"},
+        )
     except ResumeLengthError as e:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(e)
