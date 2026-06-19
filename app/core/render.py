@@ -83,6 +83,41 @@ def log_request_failed(request):
     )
 
 
+async def log_resume_layout_metrics(page):
+    metrics = await page.evaluate(
+        """() => {
+            const pageElement = document.querySelector(".page");
+            const summary = document.querySelector(".summary p");
+            if (!pageElement || !summary) {
+                return {hasPage: !!pageElement, hasSummary: !!summary};
+            }
+
+            const pageStyle = getComputedStyle(pageElement);
+            const summaryStyle = getComputedStyle(summary);
+            const range = document.createRange();
+            range.selectNodeContents(summary);
+            const summaryLines = [...range.getClientRects()]
+                .filter(rect => rect.width > 0 && rect.height > 0).length;
+
+            return {
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                pageWidth: pageElement.getBoundingClientRect().width,
+                pageClientWidth: pageElement.clientWidth,
+                pagePaddingLeft: pageStyle.paddingLeft,
+                pagePaddingRight: pageStyle.paddingRight,
+                summaryWidth: summary.getBoundingClientRect().width,
+                summaryFontFamily: summaryStyle.fontFamily,
+                summaryFontSize: summaryStyle.fontSize,
+                summaryFontWeight: summaryStyle.fontWeight,
+                summaryLineHeight: summaryStyle.lineHeight,
+                summaryLines,
+            };
+        }"""
+    )
+    logger.info("resume_layout_metrics", extra={"metrics": metrics})
+
+
 class PDFManager:
     def __init__(
         self,
@@ -131,6 +166,7 @@ class PDFManager:
                     page.on("requestfailed", log_request_failed)
                     try:
                         await page.route(f"{RESUME_ASSET_BASE_URL}**", route_assets)
+                        await page.emulate_media(media="print")
                         await page.set_content(html_string, wait_until="load")
                         try:
                             async with timeout(self.render_timeout):
@@ -143,6 +179,7 @@ class PDFManager:
                                     }))"""
                                 )
                             logger.info("font_faces", extra={"faces": faces})
+                            await log_resume_layout_metrics(page)
                         except TimeoutError:
                             raise PDFRenderTimeoutError()
                         pdf_bytes = await page.pdf(
