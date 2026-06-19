@@ -120,10 +120,12 @@ body {
 /* ── Page ── */
 @page {
     size: letter;
-    margin: 0.55in 0.5in 0.5in 0.5in;
+    margin: 0;
 }
 
 .page {
+    width: 100%;
+    padding: 0.55in 0.5in 0.5in 0.5in;
     background: var(--color-bg);
     font-family: var(--font-main);
     color: var(--color-text);
