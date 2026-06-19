@@ -83,41 +83,6 @@ def log_request_failed(request):
     )
 
 
-async def log_resume_layout_metrics(page):
-    metrics = await page.evaluate(
-        """() => {
-            const pageElement = document.querySelector(".page");
-            const summary = document.querySelector(".summary p");
-            if (!pageElement || !summary) {
-                return {hasPage: !!pageElement, hasSummary: !!summary};
-            }
-
-            const pageStyle = getComputedStyle(pageElement);
-            const summaryStyle = getComputedStyle(summary);
-            const range = document.createRange();
-            range.selectNodeContents(summary);
-            const summaryLines = [...range.getClientRects()]
-                .filter(rect => rect.width > 0 && rect.height > 0).length;
-
-            return {
-                viewportWidth: window.innerWidth,
-                viewportHeight: window.innerHeight,
-                pageWidth: pageElement.getBoundingClientRect().width,
-                pageClientWidth: pageElement.clientWidth,
-                pagePaddingLeft: pageStyle.paddingLeft,
-                pagePaddingRight: pageStyle.paddingRight,
-                summaryWidth: summary.getBoundingClientRect().width,
-                summaryFontFamily: summaryStyle.fontFamily,
-                summaryFontSize: summaryStyle.fontSize,
-                summaryFontWeight: summaryStyle.fontWeight,
-                summaryLineHeight: summaryStyle.lineHeight,
-                summaryLines,
-            };
-        }"""
-    )
-    logger.info("resume_layout_metrics", extra={"metrics": metrics})
-
-
 class PDFManager:
     def __init__(
         self,
@@ -171,15 +136,6 @@ class PDFManager:
                         try:
                             async with timeout(self.render_timeout):
                                 await page.evaluate("() => document.fonts.ready")
-                                faces = await page.evaluate(
-                                    """() => [...document.fonts].map(f => ({
-                                        family: f.family,
-                                        weight: f.weight,
-                                        status: f.status,
-                                    }))"""
-                                )
-                            logger.info("font_faces", extra={"faces": faces})
-                            await log_resume_layout_metrics(page)
                         except TimeoutError:
                             raise PDFRenderTimeoutError()
                         pdf_bytes = await page.pdf(
