@@ -26,7 +26,11 @@ configure_logging(level=log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    manager = PDFManager(settings.max_concurrency_pdf)
+    manager = PDFManager(
+        max_concurrency=settings.max_concurrency_pdf,
+        timeout=settings.pdf_manager_timeout,
+        render_timeout=settings.render_timeout,
+    )
     await manager.start()
     app.state.pdf_manager = manager
     yield
