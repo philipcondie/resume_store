@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     cors_origins: list[str]
     model_config = {"env_file": ".env"}
+    max_concurrency_pdf: int = 2
+    render_timeout: float = 10
+    pdf_manager_timeout: float = 10
 
 
 @lru_cache

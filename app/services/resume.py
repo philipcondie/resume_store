@@ -16,8 +16,14 @@ from app.core.exceptions import (
     DuplicateFilenameError,
     IncompleteResumeInputError,
     PDFGenerationError,
+    PDFReaderError,
+    PDFRendererConfigurationError,
+    PDFRenderError,
+    PDFRenderTimeoutError,
+    RenderCapacityError,
     ResourceNotFoundError,
 )
+from app.core.render import RESUME_ASSET_BASE_URL, PDFManager, PDFResult
 from app.models.base import Resume, UserLayout, UserProfile, UserPrompt
 from app.schemas.base import (
     EducationEntry,
@@ -437,7 +443,10 @@ def create_html_string(source_resume: Resume) -> str:
     filename, panels = TEMPLATE_REGISTRY[resume_layout.selected_template]
     panels_data = {p.value + "_sections": panel(p) for p in panels}
     return resume_env.get_template(filename).render(
-        **panels_data, **(resume_styling).model_dump(), resume_data=resume_data
+        **panels_data,
+        **(resume_styling).model_dump(),
+        resume_data=resume_data,
+        asset_base_url=RESUME_ASSET_BASE_URL,
     )
 
 
@@ -495,4 +504,101 @@ async def render_resume(
     )
     return RenderedResume(
         filename=source.filename, pdf=resume_bytes, page_count=len(document.pages)
+    )
+
+
+async def render_resume_playwright(
+    session: AsyncSession,
+    pdf_manager: PDFManager,
+    user_id: uuid.UUID,
+    resume_id: uuid.UUID,
+) -> RenderedResume:
+    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
+    source = (await session.scalars(query)).one_or_none()
+    if not source:
+        logger.warning(
+            "render_resume_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "reason": "resume_not_found",
+            },
+        )
+        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
+
+    html_string = create_html_string(source_resume=source)
+
+    try:
+        result: PDFResult = await pdf_manager.create_pdf(html_string)
+    except PDFRendererConfigurationError:
+        logger.error(
+            "pdf_render_not_configured",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise
+    except RenderCapacityError:
+        logger.error(
+            "pdf_renderer_acquisition_timed_out",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise
+    except PDFReaderError:
+        logger.error(
+            "pdf_reader_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise
+    except PDFRenderTimeoutError:
+        logger.error(
+            "pdf_render_timed_out",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise
+    except PDFRenderError:
+        logger.error(
+            "pdf_render_failed",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(source.id),
+                "file_name": source.filename,
+            },
+        )
+        raise PDFGenerationError(filename=source.filename)
+
+    if result.pages > 1:
+        logger.info(
+            "pdf_length_exceeds_1",
+            extra={
+                "user_id": str(user_id),
+                "resume_id": str(resume_id),
+                "length": result.pages,
+            },
+        )
+
+    logger.info(
+        "resume_pdf_downloaded",
+        extra={
+            "user_id": str(user_id),
+            "resume_id": str(source.id),
+            "file_name": source.filename,
+        },
+    )
+    return RenderedResume(
+        filename=source.filename, pdf=result.pdf, page_count=result.pages
     )

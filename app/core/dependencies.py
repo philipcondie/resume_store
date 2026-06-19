@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy import select
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_session
+from app.core.render import PDFManager
 from app.models.base import User
 
 settings = get_settings()
@@ -43,3 +44,10 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def get_pdf_manager(request: Request) -> PDFManager:
+    return request.app.state.pdf_manager
+
+
+PDFManagerDep = Annotated[PDFManager, Depends(get_pdf_manager)]

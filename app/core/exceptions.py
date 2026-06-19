@@ -31,3 +31,28 @@ class PDFGenerationError(Exception):
 
     def __init__(self, filename: str):
         super().__init__(f"Resume pdf could not be generated. Filename: {filename}")
+
+
+class PDFRendererConfigurationError(Exception):
+    def __init__(self):
+        super().__init__("PDF Renderer configuration is incorrect")
+
+
+class PDFReaderError(Exception):
+    def __init__(self):
+        super().__init__("PDF Reader could not parse pdf bytes")
+
+
+class RenderCapacityError(Exception):
+    def __init__(self):
+        super().__init__("Insufficient render capacity.")
+
+
+class PDFRenderError(Exception):
+    def __init__(self):
+        super().__init__("PDF render failed")
+
+
+class PDFRenderTimeoutError(Exception):
+    def __init__(self):
+        super().__init__("PDF render timed out")
