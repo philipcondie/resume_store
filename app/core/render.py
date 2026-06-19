@@ -145,7 +145,10 @@ class PDFManager:
                             logger.info("font_faces", extra={"faces": faces})
                         except TimeoutError:
                             raise PDFRenderTimeoutError()
-                        pdf_bytes = await page.pdf()
+                        pdf_bytes = await page.pdf(
+                            prefer_css_page_size=True,
+                            print_background=True,
+                        )
                     except PlaywrightTimeoutError:
                         raise PDFRenderTimeoutError()
                     except PlaywrightError:
