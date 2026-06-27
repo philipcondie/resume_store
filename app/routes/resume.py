@@ -19,6 +19,7 @@ from app.core.exceptions import (
 from app.schemas.base import (
     LayoutUpdateRequest,
     ResumeDuplicateRequest,
+    ResumeListResponse,
     ResumeMetadata,
     ResumeRequest,
     ResumeResponse,
@@ -52,11 +53,11 @@ async def generate_resume(
     return result
 
 
-@resume_router.get("")
+@resume_router.get("/resumes")
 async def get_resumes(
-    session: SessionDep, current_user: CurrentUserDep
-) -> list[ResumeMetadata]:
-    return await resume.get_resume_list(session, current_user.id)
+    session: SessionDep, current_user: CurrentUserDep, offset: int = 0, limit: int = 25
+) -> ResumeListResponse:
+    return await resume.get_resume_list(session, current_user.id, offset, limit)
 
 
 @resume_router.get("/{resume_id}")
