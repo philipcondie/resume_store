@@ -4,7 +4,7 @@ from pathlib import Path
 
 from anthropic import APIError
 from jinja2 import Environment, FileSystemLoader
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from weasyprint import CSS, HTML
@@ -37,6 +37,7 @@ from app.schemas.base import (
     ProjectEntry,
     RenderedResume,
     ResumeData,
+    ResumeListResponse,
     ResumeMetadata,
     ResumeResponse,
     ResumeStyling,
@@ -208,16 +209,20 @@ async def generate_resume(
 
 
 async def get_resume_list(
-    session: AsyncSession, user_id: uuid.UUID
-) -> list[ResumeMetadata]:
-    query = select(
-        Resume.id, Resume.filename, Resume.created_at, Resume.updated_at
-    ).where(Resume.user_id == user_id)
+    session: AsyncSession, user_id: uuid.UUID, offset: int, limit: int
+) -> ResumeListResponse:
+    query = (
+        select(Resume.id, Resume.filename, Resume.created_at, Resume.updated_at)
+        .where(Resume.user_id == user_id)
+        .order_by(Resume.filename, Resume.created_at)
+        .offset(offset)
+        .limit(limit)
+    )
     resumes = (await session.execute(query)).all()
     logger.info(
         "resumes_listed", extra={"user_id": str(user_id), "count": len(resumes)}
     )
-    return [
+    resumes = [
         ResumeMetadata(
             id=r.id,
             filename=r.filename,
@@ -226,6 +231,15 @@ async def get_resume_list(
         )
         for r in resumes
     ]
+    resume_count = (
+        await session.execute(
+            select(func.count()).select_from(Resume).where(Resume.user_id == user_id)
+        )
+    ).scalar_one()
+    logger.info(
+        "resumes_available", extra={"user_id": str(user_id), "count": resume_count}
+    )
+    return ResumeListResponse(resume_count=resume_count, resumes=resumes)
 
 
 async def get_resume(

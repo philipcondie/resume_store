@@ -189,6 +189,12 @@ class ResumeMetadata(BaseModel):
     updated_at: datetime
 
 
+class ResumeListResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    resumes: list[ResumeMetadata]
+    resume_count: int
+
+
 class LayoutUpdateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     layout: LayoutConfig
