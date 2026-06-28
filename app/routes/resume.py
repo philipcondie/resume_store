@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import Response
 
 import app.services.resume as resume
@@ -55,7 +55,10 @@ async def generate_resume(
 
 @resume_router.get("/resumes")
 async def get_resumes(
-    session: SessionDep, current_user: CurrentUserDep, offset: int = 0, limit: int = 25
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=25, ge=1, le=100),
 ) -> ResumeListResponse:
     return await resume.get_resume_list(session, current_user.id, offset, limit)
 

@@ -29,6 +29,7 @@ def upgrade() -> None:
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['user_account.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('hashed_token'),
     sa.UniqueConstraint('user_id')
     )
     # ### end Alembic commands ###

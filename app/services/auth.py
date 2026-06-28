@@ -74,6 +74,14 @@ async def create_user(session: AsyncSession, user: UserCreate) -> Token:
 
     session.add(UserPrompt(user_id=user_new.id, prompt=DEFAULT_USER_PROMPT))
     session.add(UserLayout(user_id=user_new.id))
+    refresh_token = create_refresh_token()
+    await upsert_refresh_token(
+        session=session,
+        user_id=user_new.id,
+        refresh_token=refresh_token,
+        expires_delta=timedelta(days=settings.refresh_token_expires),
+        commit=False,
+    )
     await session.commit()
     await session.refresh(user_new)
 
@@ -82,13 +90,6 @@ async def create_user(session: AsyncSession, user: UserCreate) -> Token:
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     logger.info("user_created", extra={"user_id": str(user_new.id)})
-    refresh_token = create_refresh_token()
-    await upsert_refresh_token(
-        session=session,
-        user_id=user_new.id,
-        refresh_token=refresh_token,
-        expires_delta=timedelta(days=settings.refresh_token_expires),
-    )
     return Token(
         access_token=access_token, token_type="bearer", refresh_token=refresh_token
     )
@@ -99,6 +100,7 @@ async def upsert_refresh_token(
     user_id: uuid.UUID,
     refresh_token: str,
     expires_delta: timedelta | None = None,
+    commit: bool = True,
 ):
     hashed_token = hashlib.sha256(refresh_token.encode()).hexdigest()
     created_at = datetime.now(UTC)
@@ -115,12 +117,18 @@ async def upsert_refresh_token(
             expires_at=expires_at,
         )
         .on_conflict_do_update(
-            index_elements=["user_id"], set_={"hashed_token": hashed_token}
+            index_elements=["user_id"],
+            set_={
+                "hashed_token": hashed_token,
+                "created_at": created_at,
+                "expires_at": expires_at,
+            },
         )
     )
 
     await session.execute(stmt)
-    await session.commit()
+    if commit:
+        await session.commit()
     logger.info("refresh_token_updated", extra={"user_id": str(user_id)})
 
 
@@ -208,6 +216,13 @@ async def refresh_access_token(
         logger.error("refresh_access_token_failed", extra={"reason": "user_not_found"})
         raise UserNotFoundError()
 
+    new_refresh_token = create_refresh_token()
+    await upsert_refresh_token(
+        session=session,
+        user_id=user.id,
+        refresh_token=new_refresh_token,
+        expires_delta=timedelta(days=settings.refresh_token_expires),
+    )
     access_token = create_access_token(
         data={"sub": user.email},
         expires_delta=timedelta(minutes=settings.jwt_token_expires),
@@ -215,5 +230,5 @@ async def refresh_access_token(
 
     logger.info("access_token_refreshed", extra={"user_id": str(user.id)})
     return Token(
-        access_token=access_token, token_type="bearer", refresh_token=refresh_token
+        access_token=access_token, token_type="bearer", refresh_token=new_refresh_token
     )

@@ -37,7 +37,7 @@ class RefreshToken(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
-    hashed_token: Mapped[str] = mapped_column(String(255))
+    hashed_token: Mapped[str] = mapped_column(String(255), unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

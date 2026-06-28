@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.dependencies import CurrentUserDep, SessionDep
-from app.core.exceptions import InvalidRefreshTokenError
+from app.core.exceptions import InvalidRefreshTokenError, UserNotFoundError
 from app.schemas.base import RefreshRequest, Token, UserCreate
 from app.services import auth as auth_service
 
@@ -52,7 +52,7 @@ async def refresh(
 ) -> Token:
     try:
         token = await auth_service.refresh_access_token(session, request.refresh_token)
-    except InvalidRefreshTokenError:
+    except (InvalidRefreshTokenError, UserNotFoundError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
