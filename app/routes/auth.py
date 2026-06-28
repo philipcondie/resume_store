@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.dependencies import CurrentUserDep, SessionDep
-from app.schemas.base import Token, UserCreate
+from app.core.exceptions import InvalidRefreshTokenError
+from app.schemas.base import RefreshRequest, Token, UserCreate
 from app.services import auth as auth_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -47,10 +48,16 @@ async def logout(session: SessionDep, current_user: CurrentUserDep):
 @auth_router.post("/refresh")
 async def refresh(
     session: SessionDep,
-    current_user: CurrentUserDep,
-    refresh_token: Annotated[str, Body(alias="refreshToken")],
+    request: RefreshRequest,
 ) -> Token:
-    token = await auth_service.refresh_access_token(session, refresh_token)
+    try:
+        token = await auth_service.refresh_access_token(session, request.refresh_token)
+    except InvalidRefreshTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     if not token:
         raise HTTPException(

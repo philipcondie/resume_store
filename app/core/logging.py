@@ -37,5 +37,6 @@ def configure_logging(level: str = "INFO") -> None:
     logging.getLogger("anthropic").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("python_multipart").setLevel(logging.WARNING)
 
     logging.getLogger(__name__).info("logging configured", extra={"log_level": level})

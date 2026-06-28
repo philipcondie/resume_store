@@ -1,7 +1,16 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint, Uuid, func
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from uuid_utils import uuid7
 
@@ -29,8 +38,10 @@ class RefreshToken(Base):
         Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
     )
     hashed_token: Mapped[str] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    expires_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class UserPrompt(Base):
