@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.core.dependencies import SessionDep
+from app.core.dependencies import CurrentUserDep, SessionDep
 from app.schemas.base import Token, UserCreate
 from app.services import auth as auth_service
 
@@ -37,3 +37,28 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return result
+
+
+@auth_router.post("/logout")
+async def logout(session: SessionDep, current_user: CurrentUserDep):
+    await auth_service.logout(session, current_user.id)
+
+
+@auth_router.post("/refresh")
+async def refresh(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    refresh_token: Annotated[str, Body(alias="refreshToken")],
+) -> Token:
+    token = await auth_service.refresh_access_token(
+        session, current_user.id, refresh_token
+    )
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Failed refresh request",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return token

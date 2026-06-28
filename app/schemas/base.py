@@ -24,8 +24,10 @@ class UserCreateResponse(BaseModel):
 
 
 class Token(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel)
     access_token: str
     token_type: str
+    refresh_token: str
 
 
 class JobEntry(BaseModel):

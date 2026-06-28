@@ -21,6 +21,18 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
+class RefreshToken(Base):
+    __tablename__ = "refresh_token"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user_account.id", ondelete="CASCADE"), unique=True
+    )
+    hashed_token: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 class UserPrompt(Base):
     __tablename__ = "user_prompt"
 

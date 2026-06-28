@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     max_concurrency_pdf: int = 2
     render_timeout: float = 10
     pdf_manager_timeout: float = 10
+    refresh_token_expires: int = 30
 
 
 @lru_cache

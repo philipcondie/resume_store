@@ -5,6 +5,16 @@ class DuplicateFilenameError(Exception):
         super().__init__(f"Filename ({filename}) already exists")
 
 
+class InvalidRefreshTokenError(Exception):
+    def __init__(self):
+        super().__init__("Invalid Refresh Token")
+
+
+class UserNotFoundError(Exception):
+    def __init__(self):
+        super().__init__("User not found")
+
+
 class ResourceNotFoundError(Exception):
     """Exception for when items are not found in database"""
 
