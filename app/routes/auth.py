@@ -50,9 +50,7 @@ async def refresh(
     current_user: CurrentUserDep,
     refresh_token: Annotated[str, Body(alias="refreshToken")],
 ) -> Token:
-    token = await auth_service.refresh_access_token(
-        session, current_user.id, refresh_token
-    )
+    token = await auth_service.refresh_access_token(session, refresh_token)
 
     if not token:
         raise HTTPException(
