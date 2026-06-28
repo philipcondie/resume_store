@@ -23,9 +23,16 @@ class UserCreateResponse(BaseModel):
     email: str
 
 
+class RefreshRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    refresh_token: str
+
+
 class Token(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     access_token: str
     token_type: str
+    refresh_token: str
 
 
 class JobEntry(BaseModel):
