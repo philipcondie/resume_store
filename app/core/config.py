@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    model_config = {"env_file": ".env"}
     database_url: str
     environment: str
     invite_code: str
@@ -12,7 +13,6 @@ class Settings(BaseSettings):
     jwt_token_expires: int
     anthropic_api_key: str
     cors_origins: list[str]
-    model_config = {"env_file": ".env"}
     max_concurrency_pdf: int = 2
     render_timeout: float = 10
     pdf_manager_timeout: float = 10
