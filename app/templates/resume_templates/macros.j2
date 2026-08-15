@@ -1,3 +1,7 @@
+{% macro linkable(value) -%}
+    {% if value.url %}<a class="resume-link" href="{{ value.url }}">{{ value.text }}</a>{% else %}{{ value.text }}{% endif %}
+{%- endmacro %}
+
 {% macro summary(summary) %}
     {% if summary and summary.strip() %}
     <section class="section summary">
@@ -64,7 +68,7 @@
             {% for project in projects %}
             <div class="section-item">
                 <div class="section-item-header">
-                    <span class="section-item-primary">{{ project.title }}</span>
+                    <span class="section-item-primary">{{ linkable(project.title) }}</span>
                 </div>
                 {% if project.bullets and project.bullets|length > 0 %}
                 <ul class="section-item-bullets">

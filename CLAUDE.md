@@ -18,6 +18,7 @@ Resume Store is a FastAPI backend that tailors resumes to job descriptions using
 ```bash
 docker compose up -d          # Postgres on localhost:5555
 uv run alembic upgrade head   # Apply migrations
+uv run playwright install chromium  # One-time browser install for PDF rendering
 uv run uvicorn app.main:app --reload
 ```
 
@@ -28,6 +29,15 @@ uv run ruff format .          # Format
 ```
 
 Pre-commit hooks run ruff check + format automatically on commit.
+
+### Tests
+```bash
+uv run python -m unittest discover -s tests -v
+RUN_PDF_INTEGRATION_TESTS=1 uv run python -m unittest discover -s tests -v
+```
+
+Tests use the standard-library `unittest` framework. Chromium-backed PDF integration
+tests are opt-in via `RUN_PDF_INTEGRATION_TESTS=1`; the rest run without a browser.
 
 ### Migrations
 ```bash
@@ -43,6 +53,9 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 - `app/main.py` — FastAPI app setup, CORS middleware (environment-aware), router registration
 - `app/routes/` — routers split by domain: `auth.py`, `profile.py`, `prompt.py`, `resume.py`
 - `app/services/` — business logic: `auth.py`, `user_data.py`, `resume.py`, `prompts.py`
+- `app/core/render.py` — managed Playwright/Chromium PDF renderer and local resume-asset routing
+- `app/templates/resume_templates/` — shared resume macros/CSS and the classic, sidebar,
+  and multipanel layouts
 - `app/core/dependencies.py` — shared FastAPI dependencies (`SessionDep`, `CurrentUserDep`, `get_current_user`)
 
 ### Key flow: `POST /resume/new`
@@ -52,7 +65,7 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 4. LLM output is combined with profile data (personal info, education, projects, skills) into a `ResumeData` composite, persisted as a `Resume` row, and `ResumeMetadata` (id, filename, timestamps) is returned
 
 ### Auth system
-- Registration (`POST /auth/new`) requires an `invite_code` and returns a `Token` directly (user is logged in on signup)
+- Registration (`POST /auth/signup`) requires an `invite_code` and returns a `Token` directly (user is logged in on signup)
 - A `UserPrompt` row with the default prompt is created automatically on registration
 - Constant-time dummy hash comparison on failed lookups to prevent user enumeration
 
@@ -66,8 +79,25 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 - Full CRUD via `app/routes/resume.py`: `POST /resume/new`, `GET /resume/`, `GET /resume/{id}`, `PUT /resume/{id}`, `DELETE /resume/{id}`
 - `Resume` model stores `llm_input`, `llm_output`, and `resume_data` as JSON columns, plus `filename` (unique per user via DB constraint)
 - `ResumeData` is the composite schema: personal info + summary + jobs + education + projects + skills
+- `LinkableText` (`text` plus optional `url`) is used for personal-info `extras` and
+  project `title`. Its pre-validator accepts legacy strings and converts them to
+  unlinked values, so existing stored JSON and clients remain compatible.
+- Link URLs accept only `http`/`https`. Scheme-less dotted hostnames receive an
+  `https://` prefix; blank URLs become `None`. Scheme-relative URLs, credentials,
+  whitespace, invalid ports, non-web schemes, and scheme-less bare hosts are rejected.
+- Resume Jinja environments enable HTML autoescaping. The shared `linkable` macro
+  renders linked and plain values consistently in every layout, and `.resume-link`
+  provides visible underlining. Chromium retains these anchors as PDF link annotations.
 - `ResumeMetadata` (id, filename, created_at, updated_at) is returned from generate and list endpoints
 - Custom `DuplicateFilenameError` raised on filename conflicts
+
+### PDF rendering
+- `PDFManager` owns a shared Playwright instance and Chromium browser, with a semaphore
+  limiting concurrent renders and separate capacity/render timeouts.
+- Resume assets are served only from `app/templates/resume_templates/` through an
+  intercepted `http://resume-assets.local/` URL; traversal and unsupported asset types
+  are rejected.
+- `pypdf` validates generated PDFs and reports their page count.
 
 ### Profile system
 - `UserProfile` model stores personal info, job/education/project history, and skills as JSON columns
@@ -86,4 +116,5 @@ All settings loaded from `.env` via pydantic-settings (`core/config.py`): `DATAB
 
 - Python 3.13+, managed with uv
 - Ruff: line-length 88, rules E/F/I/UP, double quotes
-- No test framework configured yet (tests/ directory is empty)
+- Tests use `unittest`; keep fast schema/template tests separate from opt-in Chromium
+  integration coverage.
