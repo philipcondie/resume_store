@@ -19,7 +19,9 @@ be styled with multiple layouts and exported to PDF.
   default.
 - **Layouts & styling** — render resumes with multiple layout templates and per-resume
   styling.
-- **PDF export** — download generated resumes as PDF (WeasyPrint).
+- **Clickable resume links** — add optional web links to personal-info extras and
+  project titles; links are preserved in exported PDFs.
+- **PDF export** — download generated resumes as PDF (Playwright/Chromium).
 
 ## Tech stack
 
@@ -30,7 +32,7 @@ be styled with multiple layouts and exported to PDF.
 - **Pydantic** / **pydantic-settings** for schemas and config
 - **Anthropic** SDK for LLM calls
 - **Jinja2** for prompt and layout templating
-- **WeasyPrint** for PDF generation
+- **Playwright** with Chromium for PDF generation
 - **Ruff** for linting/formatting, **pre-commit** hooks
 
 ## Getting started
@@ -46,6 +48,9 @@ be styled with multiple layouts and exported to PDF.
 ```bash
 # Install dependencies
 uv sync
+
+# Install the browser used for PDF generation
+uv run playwright install chromium
 
 # Copy the example env file and fill in your values
 cp .env.example .env
@@ -102,6 +107,43 @@ full list, which includes:
 |         | `POST /layout/styling/update`     | Update styling                       |
 | Health  | `GET /health`                     | Health check                         |
 
+### Linkable profile fields
+
+Personal-info `extras` and project `title` values can be plain strings or objects with
+display text and an optional URL. For example, `POST /profile/personal_info` can include:
+
+```json
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "phonenumber": "555-0100",
+  "extras": [
+    "San Francisco, CA",
+    { "text": "Portfolio", "url": "example.com/work" }
+  ]
+}
+```
+
+Likewise, an item sent to `POST /profile/projects` can use a linked title:
+
+```json
+[
+  {
+    "id": "project-1",
+    "title": {
+      "text": "Resume Store",
+      "url": "https://github.com/example/resume-store"
+    },
+    "bullets": []
+  }
+]
+```
+
+Plain strings remain supported for existing clients and render without a link. A URL
+without a scheme is normalized to `https://`. Explicit URLs must use `http` or `https`;
+scheme-relative URLs, credentials, whitespace, invalid ports, and non-web schemes are
+rejected. Resume templates HTML-escape both link text and URLs.
+
 ## Development
 
 ```bash
@@ -110,6 +152,12 @@ uv run ruff check --fix .
 
 # Format
 uv run ruff format .
+
+# Run unit tests (the Chromium-backed PDF test is skipped by default)
+uv run python -m unittest discover -s tests -v
+
+# Include PDF link-annotation integration coverage
+RUN_PDF_INTEGRATION_TESTS=1 uv run python -m unittest discover -s tests -v
 
 # Create a new migration after model changes
 uv run alembic revision --autogenerate -m "description"

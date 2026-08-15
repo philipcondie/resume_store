@@ -1,15 +1,77 @@
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 from pydantic.alias_generators import to_camel
 
 filename_type = Annotated[
     str, StringConstraints(min_length=1, max_length=255, strip_whitespace=True)
 ]
+url_scheme_pattern = re.compile(r"^(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*):")
+
+
+class LinkableText(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    text: str
+    url: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_string(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"text": value, "url": None}
+        return value
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def normalize_url(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("URL must be a string")
+
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if any(character.isspace() for character in normalized):
+            raise ValueError("URL cannot contain whitespace")
+        if normalized.startswith("//"):
+            raise ValueError("URL must not be scheme-relative")
+
+        scheme_match = url_scheme_pattern.match(normalized)
+        if scheme_match:
+            original_scheme = scheme_match.group("scheme")
+            scheme = original_scheme.lower()
+            if scheme not in {"http", "https"}:
+                raise ValueError("URL must use http or https")
+            normalized = f"{scheme}{normalized[len(original_scheme) :]}"
+        else:
+            normalized = f"https://{normalized}"
+
+        parsed = urlsplit(normalized)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("URL must use http or https and include a hostname")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError("URL must not include credentials")
+        if scheme_match is None and "." not in parsed.hostname:
+            raise ValueError("URL without a scheme must include a dotted hostname")
+        try:
+            parsed.port
+        except ValueError as error:
+            raise ValueError("URL contains an invalid port") from error
+        return normalized
 
 
 class UserCreate(BaseModel):
@@ -57,7 +119,7 @@ class EducationEntry(BaseModel):
 class ProjectEntry(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     id: str
-    title: str
+    title: LinkableText
     bullets: list[str]
 
 
@@ -73,7 +135,7 @@ class PersonalInfo(BaseModel):
     name: str
     email: str
     phonenumber: str
-    extras: list[str] | None = None
+    extras: list[LinkableText] | None = None
 
 
 class LLMInput(BaseModel):
@@ -169,7 +231,6 @@ class ResumeUpdateRequest(BaseModel):
     resume_data: ResumeData
     layout: LayoutConfig
     job_description: str
-    filename: filename_type
     styling: ResumeStyling
 
 
@@ -179,7 +240,6 @@ class ResumeResponse(BaseModel):
     resume_data: ResumeData
     layout: LayoutConfig
     job_description: str
-    filename: filename_type
     styling: ResumeStyling
 
 

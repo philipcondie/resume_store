@@ -26,7 +26,7 @@
             <div class="contact-info">
                 {{ resume_data.personal_info.email }} &nbsp;|&nbsp; {{ resume_data.personal_info.phonenumber }}
                 {% for extra in resume_data.personal_info.extras or [] %}
-                &nbsp;|&nbsp; {{ extra }}
+                &nbsp;|&nbsp; {{ m.linkable(extra) }}
                 {% endfor %}
             </div>
         </div>

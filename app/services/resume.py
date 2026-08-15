@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 
 from anthropic import APIError
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,7 +51,12 @@ logger = logging.getLogger(__name__)
 prompt_template_dir = Path(__file__).parent.parent / "templates"
 resume_template_dir = Path(__file__).parent.parent / "templates/resume_templates"
 prompt_env = Environment(loader=FileSystemLoader(prompt_template_dir))
-resume_env = Environment(loader=FileSystemLoader(resume_template_dir))
+resume_env = Environment(
+    loader=FileSystemLoader(resume_template_dir),
+    autoescape=select_autoescape(
+        enabled_extensions=("html", "j2"), default_for_string=True
+    ),
+)
 
 base_prompt_template = prompt_env.get_template("base_prompt.j2")
 user_message_template = prompt_env.get_template("user_message.j2")
