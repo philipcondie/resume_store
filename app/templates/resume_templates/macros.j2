@@ -16,23 +16,27 @@
     <section class="section">
         <h2 class="section-title">Work Experience</h2>
         {% for job in jobs %}
+        {% if job.role.strip() or job.company.strip() %}
+        {% set headline = [job.role, job.company, job.location] | map("default", "", true) | map("trim") | select | list %}
+        {% set shown_bullets = job.bullets | map("trim") | select | list %}
         <div class="section-item">
             <div class="section-item-header">
                 <span class="section-item-primary">
-                    {{ job.role }} — {{ job.company }}{% if job.location %} — {{ job.location }}{% endif %}
+                    {{ headline | join(" — ") }}
                 </span>
                 <span class="section-item-secondary">
                     {{ job.start_date }} - {{ job.end_date }}
                 </span>
             </div>
-            {% if job.bullets and job.bullets|length > 0 %}
+            {% if shown_bullets %}
             <ul class="section-item-bullets">
-                {% for bullet in job.bullets %}
+                {% for bullet in shown_bullets %}
                 <li>{{ bullet }}</li>
                 {% endfor %}
             </ul>
             {% endif %}
         </div>
+        {% endif %}
         {% endfor %}
     </section>
     {% endif %}
@@ -43,19 +47,22 @@
         <section class="section">
             <h2 class="section-title">Education</h2>
             {% for entry in education %}
+            {% if entry.school.strip() or entry.degree.strip() %}
+            {% set shown_bullets = entry.bullets | map("trim") | select | list %}
             <div class="section-item">
                 <div class="section-item-header">
                     <span class="section-item-primary">{{ entry.school }}</span>
                     <span class="section-item-secondary">{{ entry.degree }}</span>
                 </div>
-                {% if entry.bullets and entry.bullets|length > 0 %}
+                {% if shown_bullets %}
                 <ul class="section-item-bullets">
-                    {% for bullet in entry.bullets %}
+                    {% for bullet in shown_bullets %}
                     <li>{{ bullet }}</li>
                     {% endfor %}
                 </ul>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
         </section>
     {% endif %}
@@ -66,18 +73,21 @@
         <section class="section">
             <h2 class="section-title">Projects</h2>
             {% for project in projects %}
+            {% if project.title.text.strip() %}
+            {% set shown_bullets = project.bullets | map("trim") | select | list %}
             <div class="section-item">
                 <div class="section-item-header">
                     <span class="section-item-primary">{{ linkable(project.title) }}</span>
                 </div>
-                {% if project.bullets and project.bullets|length > 0 %}
+                {% if shown_bullets %}
                 <ul class="section-item-bullets">
-                    {% for bullet in project.bullets %}
+                    {% for bullet in shown_bullets %}
                     <li>{{ bullet }}</li>
                     {% endfor %}
                 </ul>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
         </section>
     {% endif %}

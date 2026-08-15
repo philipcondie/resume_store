@@ -424,11 +424,26 @@ TEMPLATE_REGISTRY: dict[TemplateName, tuple[str, list[Panel]]] = {
 }
 
 
+# Predicates deciding whether a single list entry has enough content to render.
+# Keys must match ResumeData field names; SectionName values are kept in sync with
+# them so verify_section can getattr() straight off the enum member.
+ENTRY_HAS_CONTENT = {
+    SectionName.jobs: lambda e: bool(e.role.strip() or e.company.strip()),
+    SectionName.education: lambda e: bool(e.school.strip() or e.degree.strip()),
+    SectionName.projects: lambda e: bool(e.title.text.strip()),
+}
+
+
 def verify_section(resume_data: ResumeData, section_name: SectionName) -> bool:
     section_data = getattr(resume_data, section_name, None)
-    if section_data and (section_name != SectionName.summary or section_data.strip()):
-        return True
-    return False
+    if not section_data:
+        return False
+    if section_name == SectionName.summary:
+        return bool(section_data.strip())
+    has_content = ENTRY_HAS_CONTENT.get(section_name)
+    if has_content:
+        return any(has_content(entry) for entry in section_data)
+    return True
 
 
 def create_html_string(source_resume: Resume) -> str:
