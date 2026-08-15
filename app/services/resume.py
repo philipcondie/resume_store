@@ -389,6 +389,7 @@ async def duplicate_resume(
         llm_output=source.llm_output,
         resume_data=source.resume_data,
         layout=source.layout,
+        styling=source.styling,
     )
     session.add(new_resume)
     try:

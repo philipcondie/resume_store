@@ -185,15 +185,17 @@ async def render_resume_playwright(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
     except PDFReaderError as e:
-        HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
     except RenderCapacityError as e:
-        HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
             headers={"Retry-After": "5"},
         )
     except PDFRenderTimeoutError as e:
-        HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
             headers={"Retry-After": "5"},
