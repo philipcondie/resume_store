@@ -136,35 +136,10 @@ async def duplicate_resume(
 
 
 @resume_router.get("/{resume_id}/pdf")
+# Legacy path from when WeasyPrint served /pdf and Chromium served this route.
+# Retire once the frontend calls /pdf exclusively.
+@resume_router.get("/{resume_id}/pdf/playwright", include_in_schema=False)
 async def render_resume(
-    session: SessionDep,
-    current_user: CurrentUserDep,
-    resume_id: uuid.UUID,
-) -> Response:
-    try:
-        rendered_resume = await resume.render_resume(
-            session, current_user.id, resume_id
-        )
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ResumeLengthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(e)
-        )
-
-    disposition = f"attachment; filename={rendered_resume.filename}.pdf"
-    return Response(
-        rendered_resume.pdf,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": disposition,
-            "X-Resume-Page-Count": str(rendered_resume.page_count),
-        },
-    )
-
-
-@resume_router.get("/{resume_id}/pdf/playwright")
-async def render_resume_playwright(
     session: SessionDep,
     current_user: CurrentUserDep,
     pdf_manager: PDFManagerDep,

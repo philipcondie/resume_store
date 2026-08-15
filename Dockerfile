@@ -3,24 +3,21 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.3 /uv /uvx /bin/
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpango-1.0-0 \                                                                             
-    libpangoft2-1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+RUN useradd --create-home --shell /bin/bash app
 
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-dev --frozen --no-install-project \
+    && chown -R app:app /app
 
-# shared user independeint location for playwright
+# shared user independent location for playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN uv run playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*
-
-COPY . /app/
-
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app \
+RUN uv run playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/* \
     && chown -R app:app /ms-playwright
+
 USER app
+COPY --chown=app:app . /app/
 
 EXPOSE 8000
 

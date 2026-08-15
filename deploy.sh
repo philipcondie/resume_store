@@ -49,8 +49,17 @@ log "recording current remote SHA for potential rollback"
 PREVIOUS_SHA=$(ssh "$SERVER" "cd $REMOTE_PATH && git rev-parse HEAD")
 log "current remote HEAD: $PREVIOUS_SHA"
 
-log "pulling + rebuilding on $SERVER"                                                                    
-ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build"
+log "pulling + rebuilding on $SERVER"
+# The migrate service runs to completion before app starts. If it exits
+# non-zero, compose aborts here and the app is never started.
+if ! ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build"; then
+    log "FAILURE: build/startup failed. Migration logs:"
+    ssh "$SERVER" "cd $REMOTE_PATH && docker compose -f $COMPOSE_FILE logs --no-color --tail 50 migrate" || true
+    log "NOT auto-rolling back: migrations may have partially applied, and"
+    log "reverting code against a changed schema can be worse than stopping."
+    log "Previous SHA for manual rollback: $PREVIOUS_SHA"
+    exit 3
+fi
 
 log "waiting up to ${HEALTH_TIMEOUT}s for $HEALTH_URL"
 if wait_for_health "$HEALTH_URL" "$HEALTH_TIMEOUT"; then                                                 
@@ -58,7 +67,12 @@ if wait_for_health "$HEALTH_URL" "$HEALTH_TIMEOUT"; then
     exit 0                                                                                               
 fi
 
-log "FAILURE: health check timed out. Rolling back to $PREVIOUS_SHA"                                     
+# Migrations succeeded (compose would have aborted above otherwise), so this is
+# an app-level failure and rolling the code back is safe.
+log "FAILURE: health check timed out. App logs:"
+ssh "$SERVER" "cd $REMOTE_PATH && docker compose -f $COMPOSE_FILE logs --no-color --tail 50 app" || true
+
+log "rolling back to $PREVIOUS_SHA"
 ssh "$SERVER" "cd $REMOTE_PATH && git reset --hard $PREVIOUS_SHA && docker compose -f $COMPOSE_FILE up -d --build"                                                                                                
                                         
 log "verifying rollback"                                                                                 

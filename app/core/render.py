@@ -105,12 +105,28 @@ class PDFManager:
         self.semaphore = Semaphore(self.max_concurrency)
 
     async def stop(self):
+        # Teardown runs on abnormal exit as well as clean shutdown. Uvicorn's
+        # reloader and SIGTERM signal the whole process group, so Playwright's
+        # Node driver subprocess is often already dead by the time we get here
+        # and these calls fail. Each step is isolated so a failure in one does
+        # not leak the resource the next one owns, and neither is allowed to
+        # propagate: nothing recoverable follows, and raising here turns an
+        # ordinary shutdown into "Application shutdown failed".
         if self.browser:
-            await self.browser.close()
-            self.browser = None
+            try:
+                await self.browser.close()
+            except PlaywrightError as e:
+                logger.warning("pdf_browser_close_failed", extra={"error": str(e)})
+            finally:
+                self.browser = None
+
         if self.playwright:
-            await self.playwright.stop()
-            self.playwright = None
+            try:
+                await self.playwright.stop()
+            except PlaywrightError as e:
+                logger.warning("pdf_driver_stop_failed", extra={"error": str(e)})
+            finally:
+                self.playwright = None
 
     async def create_pdf(self, html_string: str) -> PDFResult:
         # set up timeout

@@ -70,6 +70,36 @@ def upgrade() -> None:
         )
 
 
+def restore_layout(new: dict) -> list:
+    """Inverse of transform_layout.
+
+    The 'classic' template assigns panel='main' to every section and otherwise
+    preserves the original entries verbatim, so dropping 'panel' from it
+    recovers the pre-migration shape exactly. The 'sidebar' and 'multipanel'
+    variants are derived from the same source list and carry no extra user
+    data, so discarding them loses nothing that upgrade() did not synthesize.
+    """
+    return [
+        {k: v for k, v in section.items() if k != "panel"}
+        for section in new["templates"]["classic"]["sections"]
+    ]
+
+
 def downgrade() -> None:
     """Downgrade schema."""
-    pass
+    conn = op.get_bind()
+    for row in conn.execute(sa.text("SELECT id, layout FROM user_layout")):
+        if "templates" not in row.layout:
+            continue
+        conn.execute(
+            sa.text("UPDATE user_layout SET layout = :l WHERE id = :id"),
+            {"l": json.dumps(restore_layout(row.layout)), "id": row.id},
+        )
+
+    for row in conn.execute(sa.text("SELECT id, layout FROM resume")):
+        if "templates" not in row.layout:
+            continue
+        conn.execute(
+            sa.text("UPDATE resume SET layout = :l WHERE id = :id"),
+            {"l": json.dumps(restore_layout(row.layout)), "id": row.id},
+        )

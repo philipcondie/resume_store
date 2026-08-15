@@ -28,15 +28,59 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519                                                                                                                                                                                     
           ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts                                                                                                                                               
                                                                                                                                                                                                                           
-      - name: Record previous SHA for rollback                                                                                                                                                                            
-        id: previous                                                                                                                                                                                                      
+      - name: Record previous SHA for rollback
+        id: previous
         run: |
           PREVIOUS_SHA=$(ssh "$SERVER" "cd $REMOTE_PATH && git rev-parse HEAD")
-          echo "sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT                                                                                                                                                             
-                                                                                                                                                                                                                          
-      - name: Deploy
+          echo "sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT
+
+      # Captured before migrating so a failed deploy can downgrade back to the
+      # exact schema this release started from.
+      - name: Record previous DB revision
+        id: previous_db
         run: |
-          ssh "$SERVER" "cd $REMOTE_PATH && git pull && docker compose -f $COMPOSE_FILE up -d --build --remove-orphans app && docker compose -f $COMPOSE_FILE exec -T caddy caddy reload --config /etc/caddy/Caddyfile"
+          PREVIOUS_REV=$(ssh "$SERVER" "cd $REMOTE_PATH && \
+            docker compose -f $COMPOSE_FILE run --rm --no-deps -T migrate \
+            uv run alembic current 2>/dev/null | grep -oE '^[0-9a-f]{12}' | head -1")
+          echo "rev=$PREVIOUS_REV" >> $GITHUB_OUTPUT
+          echo "pre-deploy alembic revision: ${PREVIOUS_REV:-<none>}"
+
+      - name: Pull and build
+        run: |
+          ssh "$SERVER" "cd $REMOTE_PATH && git pull && \
+            docker compose -f $COMPOSE_FILE build"
+
+      # Run migrations as their own step so a migration failure is attributable
+      # and can be handled differently from an app-level failure.
+      - name: Run migrations
+        id: migrate
+        run: |
+          if ! ssh "$SERVER" "cd $REMOTE_PATH && \
+              docker compose -f $COMPOSE_FILE up --no-deps --exit-code-from migrate migrate"; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "::group::migrate logs"
+            ssh "$SERVER" "cd $REMOTE_PATH && \
+              docker compose -f $COMPOSE_FILE logs --no-color --tail 100 migrate" || true
+            echo "::endgroup::"
+            exit 1
+          fi
+          NEW_REV=$(ssh "$SERVER" "cd $REMOTE_PATH && \
+            docker compose -f $COMPOSE_FILE run --rm --no-deps -T migrate \
+            uv run alembic current 2>/dev/null | grep -oE '^[0-9a-f]{12}' | head -1")
+          echo "rev=$NEW_REV" >> $GITHUB_OUTPUT
+          if [[ "$NEW_REV" != "${{ steps.previous_db.outputs.rev }}" ]]; then
+            echo "applied=true" >> $GITHUB_OUTPUT
+            echo "schema moved: ${{ steps.previous_db.outputs.rev }} -> $NEW_REV"
+          else
+            echo "applied=false" >> $GITHUB_OUTPUT
+            echo "no schema change"
+          fi
+
+      - name: Start app
+        run: |
+          ssh "$SERVER" "cd $REMOTE_PATH && \
+            docker compose -f $COMPOSE_FILE up -d --remove-orphans app && \
+            docker compose -f $COMPOSE_FILE exec -T caddy caddy reload --config /etc/caddy/Caddyfile"
                                                                                                                                                                                                                           
       - name: Health check                                                                                                                                                                                                
         id: health                                                                                                                                                                                                        
@@ -61,13 +105,47 @@ jobs:
           echo "timeout after ${timeout}s"
           exit 1                                                                                                                                                                            
                                                                                                                                                                                                                           
+      - name: App logs on failure
+        if: failure() && steps.migrate.outputs.failed != 'true'
+        run: |
+          echo "::group::app logs"
+          ssh "$SERVER" "cd $REMOTE_PATH && \
+            docker compose -f $COMPOSE_FILE logs --no-color --tail 100 app" || true
+          echo "::endgroup::"
+
+      # A migration failure leaves the schema in an unknown state: alembic runs
+      # each revision in its own transaction, so earlier revisions in this
+      # deploy may have committed. Downgrading blind could destroy data, so
+      # stop and report instead.
+      - name: Migration failure - no rollback
+        if: failure() && steps.migrate.outputs.failed == 'true'
+        run: |
+          echo "::error::Migrations failed. NOT rolling back automatically."
+          echo "::error::Schema may be partially applied - inspect before retrying."
+          echo "Pre-deploy alembic revision: ${{ steps.previous_db.outputs.rev }}"
+          echo "Pre-deploy git SHA:          ${{ steps.previous.outputs.sha }}"
+          echo "Manual recovery, once you have confirmed it is safe:"
+          echo "  docker compose -f $COMPOSE_FILE run --rm migrate \\"
+          echo "    uv run alembic downgrade ${{ steps.previous_db.outputs.rev }}"
+
+      # Migrations succeeded but the app is unhealthy. Because migrations are
+      # not guaranteed backward-compatible, the schema must be reverted along
+      # with the code - old code against a new schema is its own failure mode.
+      - name: Roll back schema
+        if: failure() && steps.migrate.outputs.failed != 'true' && steps.migrate.outputs.applied == 'true' && steps.previous_db.outputs.rev != ''
+        run: |
+          echo "::warning::Rolling schema back to ${{ steps.previous_db.outputs.rev }}"
+          ssh "$SERVER" "cd $REMOTE_PATH && \
+            docker compose -f $COMPOSE_FILE run --rm --no-deps -T migrate \
+            uv run alembic downgrade ${{ steps.previous_db.outputs.rev }}"
+
       - name: Rollback on failure
-        if: failure() && steps.previous.outputs.sha != ''
+        if: failure() && steps.migrate.outputs.failed != 'true' && steps.previous.outputs.sha != ''
         run: |
           ssh "$SERVER" "cd $REMOTE_PATH && git reset --hard ${{ steps.previous.outputs.sha }} && docker compose -f $COMPOSE_FILE up -d --build --remove-orphans app && docker compose -f $COMPOSE_FILE exec -T caddy caddy reload --config /etc/caddy/Caddyfile"
       
       - name: Health check on rollback
-        if: failure()
+        if: failure() && steps.migrate.outputs.failed != 'true'
         run: |
           url="$HEALTH_URL"                                                                                        
           timeout="$HEALTH_TIMEOUT"                                                                                

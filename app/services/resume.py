@@ -7,8 +7,6 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import CSS, HTML
-from weasyprint.text.fonts import FontConfiguration
 
 from app.core.claude import client
 from app.core.defaults import DEFAULT_USER_PROMPT
@@ -57,17 +55,6 @@ resume_env = Environment(loader=FileSystemLoader(resume_template_dir))
 
 base_prompt_template = prompt_env.get_template("base_prompt.j2")
 user_message_template = prompt_env.get_template("user_message.j2")
-
-# A shared FontConfiguration is required for @font-face fonts declared in an
-# external stylesheet to register; it must be passed to both the CSS() that
-# declares the faces and the render() call that uses them. Without it,
-# WeasyPrint silently falls back to a system font (DejaVu Sans on slim Linux),
-# which is wider than Open Sans and overflows the resume onto a second page.
-FONT_CONFIG = FontConfiguration()
-RESUME_CSS = CSS(
-    filename=str(resume_template_dir / "resume.css"),
-    font_config=FONT_CONFIG,
-)
 
 
 async def send_message(
@@ -462,63 +449,6 @@ def create_html_string(source_resume: Resume) -> str:
         **(resume_styling).model_dump(),
         resume_data=resume_data,
         asset_base_url=RESUME_ASSET_BASE_URL,
-    )
-
-
-async def render_resume(
-    session: AsyncSession, user_id: uuid.UUID, resume_id: uuid.UUID
-) -> RenderedResume:
-    query = select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)
-    source = (await session.scalars(query)).one_or_none()
-    if not source:
-        logger.warning(
-            "render_resume_failed",
-            extra={
-                "user_id": str(user_id),
-                "resume_id": str(resume_id),
-                "reason": "resume_not_found",
-            },
-        )
-        raise ResourceNotFoundError(resource="resume", identifier=str(resume_id))
-
-    html_string = create_html_string(source_resume=source)
-    document = HTML(string=html_string, base_url=str(resume_template_dir)).render(
-        stylesheets=[RESUME_CSS],
-        font_config=FONT_CONFIG,
-    )
-
-    if len(document.pages) > 1:
-        logger.info(
-            "pdf_length_exceeds_1",
-            extra={
-                "user_id": str(user_id),
-                "resume_id": str(resume_id),
-                "length": len(document.pages),
-            },
-        )
-
-    resume_bytes = document.write_pdf()
-    if not resume_bytes:
-        logger.error(
-            "pdf_create_failed",
-            extra={
-                "user_id": str(user_id),
-                "resume_id": str(source.id),
-                "file_name": source.filename,
-            },
-        )
-        raise PDFGenerationError(source.filename)
-
-    logger.info(
-        "resume_pdf_downloaded",
-        extra={
-            "user_id": str(user_id),
-            "resume_id": str(source.id),
-            "file_name": source.filename,
-        },
-    )
-    return RenderedResume(
-        filename=source.filename, pdf=resume_bytes, page_count=len(document.pages)
     )
 
 

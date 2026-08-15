@@ -1,4 +1,18 @@
 services:
+  # One-shot migration runner. Kept separate from the app so a failed migration
+  # exits once with a non-zero code instead of crash-looping under the app's
+  # restart policy, and so the app never starts against a half-migrated schema.
+  migrate:
+    build: .
+    env_file: .env.prod
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+
   app:
     build: .
     env_file: .env.prod
@@ -8,8 +22,11 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    command: >
-      sh -c "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command:
+      ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   caddy:
     image: caddy:2.11.2
