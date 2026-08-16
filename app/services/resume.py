@@ -112,6 +112,25 @@ async def send_message(
     return response.parsed_output
 
 
+def restore_job_order(
+    generated_jobs: list[JobEntry], input_jobs: list[JobEntry]
+) -> list[JobEntry]:
+    """Put generated jobs back in the user-selected input order.
+
+    Structured output guarantees the job shape, but not list order. Unknown IDs are
+    retained at the end in the order returned by the model so no generated data is
+    silently discarded.
+    """
+    input_positions: dict[str, int] = {}
+    for job in input_jobs:
+        input_positions.setdefault(job.id, len(input_positions))
+
+    return sorted(
+        generated_jobs,
+        key=lambda job: input_positions.get(job.id, len(input_positions)),
+    )
+
+
 async def generate_resume(
     session: AsyncSession, user_id: uuid.UUID, filename: str, llm_input: LLMInput
 ) -> ResumeMetadata:
@@ -146,7 +165,10 @@ async def generate_resume(
     resume_data = ResumeData(
         summary=llm_output.summary,
         personal_info=PersonalInfo.model_validate(profile.personal_info),
-        jobs=[JobEntry.model_validate(j) for j in llm_output.jobs],
+        jobs=[
+            JobEntry.model_validate(job)
+            for job in restore_job_order(llm_output.jobs, llm_input.jobs)
+        ],
         education=[EducationEntry.model_validate(e) for e in profile.education or []],
         projects=[ProjectEntry.model_validate(p) for p in profile.projects or []],
         skills=[SkillEntry.model_validate(s) for s in profile.skills or []],
