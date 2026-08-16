@@ -19,8 +19,8 @@ be styled with multiple layouts and exported to PDF.
   default.
 - **Layouts & styling** — render resumes with multiple layout templates and per-resume
   styling.
-- **Clickable resume links** — add optional web links to personal-info extras and
-  project titles; links are preserved in exported PDFs.
+- **Clickable resume links** — add optional links to personal-info extras and separate
+  website/GitHub links to projects; links are preserved in exported PDFs.
 - **PDF export** — download generated resumes as PDF (Playwright/Chromium).
 
 ## Tech stack
@@ -109,8 +109,8 @@ full list, which includes:
 
 ### Linkable profile fields
 
-Personal-info `extras` and project `title` values can be plain strings or objects with
-display text and an optional URL. For example, `POST /profile/personal_info` can include:
+Personal-info `extras` values can be plain strings or objects with display text and an
+optional URL. For example, `POST /profile/personal_info` can include:
 
 ```json
 {
@@ -124,25 +124,26 @@ display text and an optional URL. For example, `POST /profile/personal_info` can
 }
 ```
 
-Likewise, an item sent to `POST /profile/projects` can use a linked title:
+Projects have separate title, title-description, website, and GitHub fields:
 
 ```json
 [
   {
     "id": "project-1",
-    "title": {
-      "text": "Resume Store",
-      "url": "https://github.com/example/resume-store"
-    },
+    "title": "Resume Store",
+    "description": "Resume persistence and PDF rendering service",
+    "websiteUrl": "https://resume-store.example.com",
+    "githubUrl": "https://github.com/example/resume-store",
     "bullets": []
   }
 ]
 ```
 
-Plain strings remain supported for existing clients and render without a link. A URL
-without a scheme is normalized to `https://`. Explicit URLs must use `http` or `https`;
-scheme-relative URLs, credentials, whitespace, invalid ports, and non-web schemes are
-rejected. Resume templates HTML-escape both link text and URLs.
+Legacy project titles supplied as `{ "text": "...", "url": "..." }` remain
+supported; their URL becomes `websiteUrl`. A URL without a scheme is normalized to
+`https://`. Explicit URLs must use `http` or `https`; scheme-relative URLs,
+credentials, whitespace, invalid ports, and non-web schemes are rejected. Resume
+templates HTML-escape titles, descriptions, and URLs.
 
 ## Development
 

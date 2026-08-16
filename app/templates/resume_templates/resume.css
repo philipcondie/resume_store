@@ -235,6 +235,55 @@ body {
     color: var(--color-accent);
 }
 
+.project-title-editor,
+.project-title-primary,
+.project-title-description,
+.project-link-controls {
+    display: inline-flex;
+}
+
+.project-title-editor {
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.04in;
+}
+
+.project-title-primary,
+.project-link-controls {
+    align-items: center;
+}
+
+.project-title-primary {
+    gap: 0.025in;
+    white-space: nowrap;
+}
+
+.project-title-description {
+    align-items: baseline;
+    gap: 0.04in;
+    color: var(--color-text);
+    font-weight: 400;
+}
+
+.project-link-controls {
+    gap: 0.025in;
+}
+
+.project-link-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.16in;
+    height: 0.16in;
+    color: var(--color-accent);
+    opacity: 0.82;
+}
+
+.project-link-control svg {
+    width: 0.13in;
+    height: 0.13in;
+}
+
 .section-item-secondary {
     font-weight: 700;
     color: var(--color-accent);

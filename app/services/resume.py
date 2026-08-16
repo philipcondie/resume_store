@@ -430,7 +430,7 @@ TEMPLATE_REGISTRY: dict[TemplateName, tuple[str, list[Panel]]] = {
 ENTRY_HAS_CONTENT = {
     SectionName.jobs: lambda e: bool(e.role.strip() or e.company.strip()),
     SectionName.education: lambda e: bool(e.school.strip() or e.degree.strip()),
-    SectionName.projects: lambda e: bool(e.title.text.strip()),
+    SectionName.projects: lambda e: bool(e.title.strip()),
 }
 
 

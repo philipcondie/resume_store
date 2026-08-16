@@ -79,9 +79,10 @@ Alembic env.py reads `DATABASE_URL` from `.env` via `get_settings()`, not from `
 - Full CRUD via `app/routes/resume.py`: `POST /resume/new`, `GET /resume/`, `GET /resume/{id}`, `PUT /resume/{id}`, `DELETE /resume/{id}`
 - `Resume` model stores `llm_input`, `llm_output`, and `resume_data` as JSON columns, plus `filename` (unique per user via DB constraint)
 - `ResumeData` is the composite schema: personal info + summary + jobs + education + projects + skills
-- `LinkableText` (`text` plus optional `url`) is used for personal-info `extras` and
-  project `title`. Its pre-validator accepts legacy strings and converts them to
-  unlinked values, so existing stored JSON and clients remain compatible.
+- `LinkableText` (`text` plus optional `url`) is used for personal-info `extras`.
+  Projects use separate `title`, `description`, `website_url`, and `github_url`
+  fields. `ProjectEntry` accepts legacy string and linkable-object titles, moving an
+  old title URL into `website_url` so existing stored JSON and clients remain compatible.
 - Link URLs accept only `http`/`https`. Scheme-less dotted hostnames receive an
   `https://` prefix; blank URLs become `None`. Scheme-relative URLs, credentials,
   whitespace, invalid ports, non-web schemes, and scheme-less bare hosts are rejected.

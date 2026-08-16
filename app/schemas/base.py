@@ -119,8 +119,34 @@ class EducationEntry(BaseModel):
 class ProjectEntry(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     id: str
-    title: LinkableText
+    title: str
+    description: str = ""
+    website_url: str | None = None
+    github_url: str | None = None
     bullets: list[str]
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_title(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+
+        normalized = dict(value)
+        title = normalized.get("title")
+        if isinstance(title, LinkableText):
+            normalized["title"] = title.text
+            if "websiteUrl" not in normalized and "website_url" not in normalized:
+                normalized["websiteUrl"] = title.url
+        elif isinstance(title, dict):
+            normalized["title"] = title.get("text", "")
+            if "websiteUrl" not in normalized and "website_url" not in normalized:
+                normalized["websiteUrl"] = title.get("url")
+        return normalized
+
+    @field_validator("website_url", "github_url", mode="before")
+    @classmethod
+    def normalize_project_url(cls, value: object) -> str | None:
+        return LinkableText(text="", url=value).url
 
 
 class SkillEntry(BaseModel):

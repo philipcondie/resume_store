@@ -83,7 +83,38 @@ class LinkableTextSchemaTests(unittest.TestCase):
 
         self.assertEqual(personal_info.extras[0].text, "London")
         self.assertIsNone(personal_info.extras[0].url)
-        self.assertEqual(project.title.text, "Analytical Engine")
+        self.assertEqual(project.title, "Analytical Engine")
+        self.assertEqual(project.description, "")
+        self.assertIsNone(project.website_url)
+        self.assertIsNone(project.github_url)
+
+    def test_legacy_linked_project_title_becomes_title_and_website(self):
+        project = ProjectEntry.model_validate(
+            {
+                "id": "project-1",
+                "title": {"text": "Analytical Engine", "url": "example.com"},
+                "bullets": [],
+            }
+        )
+
+        self.assertEqual(project.title, "Analytical Engine")
+        self.assertEqual(project.website_url, "https://example.com")
+
+    def test_project_links_are_normalized_and_use_camel_case_aliases(self):
+        project = ProjectEntry(
+            id="project-1",
+            title="Analytical Engine",
+            description="A mechanical computer",
+            websiteUrl="example.com/engine",
+            githubUrl="github.com/example/engine",
+            bullets=[],
+        )
+
+        self.assertEqual(project.website_url, "https://example.com/engine")
+        self.assertEqual(project.github_url, "https://github.com/example/engine")
+        dumped = project.model_dump(by_alias=True)
+        self.assertIn("websiteUrl", dumped)
+        self.assertIn("githubUrl", dumped)
 
 
 class LinkableTextTemplateTests(unittest.TestCase):
@@ -111,6 +142,8 @@ class LinkableTextTemplateTests(unittest.TestCase):
                             "text": "Analytical <Engine>",
                             "url": "https://example.com/engine",
                         },
+                        "description": "Computing <script>alert(1)</script>",
+                        "githubUrl": "github.com/example/engine",
                         "bullets": [],
                     },
                     {"id": "project-2", "title": "Plain Project", "bullets": []},
@@ -130,13 +163,17 @@ class LinkableTextTemplateTests(unittest.TestCase):
                     'href="https://example.com?a=1&amp;b=2">Portfolio &amp; Notes</a>',
                     html,
                 )
-                self.assertIn(
-                    'href="https://example.com/engine">Analytical &lt;Engine&gt;</a>',
-                    html,
-                )
+                self.assertIn('href="https://example.com/engine"', html)
+                self.assertIn('aria-label="Project website"', html)
+                self.assertIn('href="https://github.com/example/engine"', html)
+                self.assertIn('aria-label="GitHub repository"', html)
+                self.assertIn("Analytical &lt;Engine&gt;", html)
+                self.assertIn("Computing &lt;script&gt;alert(1)&lt;/script&gt;", html)
                 self.assertIn("London &lt;script&gt;alert(1)&lt;/script&gt;", html)
                 self.assertNotIn("<script>", html)
                 self.assertIn("Plain Project", html)
+                self.assertEqual(html.count('class="project-link-control"'), 2)
+                self.assertEqual(html.count('class="project-link-controls"'), 1)
 
 
 @unittest.skipUnless(
@@ -165,6 +202,7 @@ class LinkableTextPDFTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("https://example.com/?a=1&b=2", uris)
         self.assertIn("https://example.com/engine", uris)
+        self.assertIn("https://github.com/example/engine", uris)
 
 
 if __name__ == "__main__":
